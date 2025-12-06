@@ -50,6 +50,22 @@ const FEED_OPTIONS = [
   { value: "rapid-bus-kuantan", label: "Rapid Kuantan" },
 ];
 
+const BusIcon: React.FC<{ className?: string }> = ({
+  className = "w-5 h-5",
+}) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M4 16c0 1.1.9 2 2 2h1v1c0 .55.45 1 1 1s1-.45 1-1v-1h6v1c0 .55.45 1 1 1s1-.45 1-1v-1h1c1.1 0 2-.9 2-2V8c0-3.5-3.58-4-8-4s-8 .5-8 4v8zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6H6V8h12v3z" />
+  </svg>
+);
+
+const TrainIcon: React.FC<{ className?: string }> = ({
+  className = "w-5 h-5",
+}) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2c-4 0-8 .5-8 4v9.5C4 17.43 5.57 19 7.5 19L6 20.5v.5h2.23l2-2H14l2 2h2v-.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5V6c0-3.5-3.58-4-8-4zM7.5 17c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm3.5-7H6V6h5v4zm2 0V6h5v4h-5zm3.5 7c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
+  </svg>
+);
+
 const Filters: React.FC = () => {
   const {
     filters,
@@ -126,13 +142,18 @@ const Filters: React.FC = () => {
                     filters.vehicleType === type.value ? null : type.value,
                 })
               }
-              className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
                 filters.vehicleType === type.value
                   ? "bg-primary-500 text-white"
                   : "bg-dark-800 text-dark-300 hover:bg-dark-700"
               }`}
             >
-              <span className="mr-1">{type.icon}</span> {type.label}
+              {type.value === "train" ? (
+                <TrainIcon className="w-6 h-6" />
+              ) : (
+                <BusIcon className="w-6 h-6" />
+              )}
+              <span>{type.label}</span>
             </button>
           ))}
         </div>

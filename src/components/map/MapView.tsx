@@ -19,20 +19,13 @@ const LIGHT_STYLE = "mapbox://styles/mapbox/streets-v12";
 
 // Custom color configurations
 const darkModeColors = {
-  // Background and land - dark magenta tints
   background: "#1a0a14",
   land: "#1f0f1a",
   landAlt: "#2a1422",
-
-  // Water - deep magenta-blue
   water: "#1a0f2e",
   waterShadow: "#140a24",
-
-  // Parks and green areas - dark teal with magenta
   park: "#0f1a1a",
   grass: "#121a18",
-
-  // Roads - magenta tints
   roadHighway: "#4a1f3d",
   roadHighwayCase: "#2d1226",
   roadMajor: "#3d1a33",
@@ -40,37 +33,24 @@ const darkModeColors = {
   roadMinor: "#2d1426",
   roadMinorCase: "#1f0f1a",
   roadStreet: "#261220",
-
-  // Buildings
   building: "#2a1422",
   buildingOutline: "#3d1a33",
-
-  // Labels
   labelPrimary: "#e8d0e0",
   labelSecondary: "#a87090",
   labelTertiary: "#704060",
-
-  // Boundaries
   boundary: "#4a1f3d",
   boundaryCase: "#2d1226",
 };
 
 const lightModeColors = {
-  // Background and land - warm cream with slight green tint
   background: "#f5f8f5",
   land: "#f0f5f0",
   landAlt: "#e8f0e8",
-
-  // Water - vibrant blue-teal
   water: "#4fb3d9",
   waterShadow: "#3a9bc4",
-
-  // Parks and green areas - vibrant greens
   park: "#a8e6a3",
   grass: "#b8f0b0",
   vegetation: "#8ed488",
-
-  // Roads - blue-gray with teal hints
   roadHighway: "#7eb8c9",
   roadHighwayCase: "#5a9eb5",
   roadMajor: "#9ec8d8",
@@ -78,34 +58,89 @@ const lightModeColors = {
   roadMinor: "#d0e8ef",
   roadMinorCase: "#b8d8e4",
   roadStreet: "#e0f0f5",
-
-  // Buildings - light blue-gray
   building: "#d8e8ee",
   buildingOutline: "#b8d0da",
-
-  // Labels
   labelPrimary: "#1a3040",
   labelSecondary: "#3a5a70",
   labelTertiary: "#5a7a90",
-
-  // Boundaries
   boundary: "#8ab8c8",
   boundaryCase: "#6a98a8",
-
-  // POI and amenities
   poi: "#4a8fa0",
 };
+
+// Calibrating Indicator Component
+const CalibratingIndicator: React.FC<{ isDark: boolean }> = ({ isDark }) => (
+  <div
+    className={`absolute top-14 right-2 z-20 flex items-center gap-3 px-4 py-2.5 rounded-lg animate-fade-in`}
+  >
+    {/* Spinner */}
+    <div className="relative w-5 h-5">
+      <div
+        className={`absolute inset-0 rounded-full border-2 border-t-transparent animate-spin ${
+          isDark ? "border-primary-400" : "border-primary-500"
+        }`}
+      />
+    </div>
+
+    {/* Text */}
+    <span
+      className={`text-sm font-medium ${
+        isDark ? "text-primary-300" : "text-primary-600"
+      }`}
+    >
+      Calibrating...
+    </span>
+  </div>
+);
 
 const MapView: React.FC = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<mapboxgl.Map | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [isCalibrating, setIsCalibrating] = useState(false);
   const initializingRef = useRef(false);
+  const calibratingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastUpdateRef = useRef<number>(0);
+
   const { setMap, userLocation, isLocationEnabled } = useMap();
-  const { vehicles } = useTransit();
+  const { vehicles, lastDataUpdate } = useTransit();
   const { isDark } = useTheme();
   const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const currentStyleRef = useRef<string>(isDark ? DARK_STYLE : LIGHT_STYLE);
+
+  // Handle GTFS data updates - show calibrating indicator
+  useEffect(() => {
+    // Skip initial mount and only trigger on actual updates
+    if (lastDataUpdate === 0) return;
+    if (lastUpdateRef.current === 0) {
+      lastUpdateRef.current = lastDataUpdate;
+      return;
+    }
+
+    // Only show if it's a new update
+    if (lastDataUpdate !== lastUpdateRef.current) {
+      lastUpdateRef.current = lastDataUpdate;
+
+      // Clear any existing timeout
+      if (calibratingTimeoutRef.current) {
+        clearTimeout(calibratingTimeoutRef.current);
+      }
+
+      // Show calibrating indicator
+      setIsCalibrating(true);
+
+      // Hide after 2 seconds
+      calibratingTimeoutRef.current = setTimeout(() => {
+        setIsCalibrating(false);
+      }, 2000);
+    }
+
+    return () => {
+      if (calibratingTimeoutRef.current) {
+        clearTimeout(calibratingTimeoutRef.current);
+      }
+    };
+  }, [lastDataUpdate]);
 
   // Apply custom colors to the map
   const applyCustomColors = useCallback(
@@ -113,7 +148,6 @@ const MapView: React.FC = () => {
       const colors = isDarkMode ? darkModeColors : lightModeColors;
 
       try {
-        // Background
         if (map.getLayer("background")) {
           map.setPaintProperty(
             "background",
@@ -122,7 +156,6 @@ const MapView: React.FC = () => {
           );
         }
 
-        // Land and landuse
         const landLayers = ["land", "landcover", "landuse"];
         landLayers.forEach(layer => {
           if (map.getLayer(layer)) {
@@ -130,7 +163,6 @@ const MapView: React.FC = () => {
           }
         });
 
-        // Water
         const waterLayers = ["water", "water-shadow"];
         waterLayers.forEach(layer => {
           if (map.getLayer(layer)) {
@@ -142,7 +174,6 @@ const MapView: React.FC = () => {
           }
         });
 
-        // Parks and green spaces
         const parkLayers = ["landuse", "park", "national-park"];
         parkLayers.forEach(layer => {
           if (map.getLayer(layer)) {
@@ -162,7 +193,6 @@ const MapView: React.FC = () => {
           }
         });
 
-        // Roads - highways
         if (map.getLayer("road-highway")) {
           map.setPaintProperty(
             "road-highway",
@@ -178,7 +208,6 @@ const MapView: React.FC = () => {
           );
         }
 
-        // Roads - major
         const majorRoadLayers = [
           "road-major-link",
           "road-primary",
@@ -198,7 +227,6 @@ const MapView: React.FC = () => {
           }
         });
 
-        // Roads - minor and streets
         const minorRoadLayers = [
           "road-minor",
           "road-street",
@@ -218,7 +246,6 @@ const MapView: React.FC = () => {
           }
         });
 
-        // Buildings
         if (map.getLayer("building")) {
           map.setPaintProperty("building", "fill-color", colors.building);
           map.setPaintProperty(
@@ -235,7 +262,6 @@ const MapView: React.FC = () => {
           );
         }
 
-        // 3D Buildings
         if (map.getLayer("3d-buildings")) {
           map.setPaintProperty(
             "3d-buildings",
@@ -244,7 +270,6 @@ const MapView: React.FC = () => {
           );
         }
 
-        // Labels
         const primaryLabelLayers = [
           "place-city-label",
           "place-town-label",
@@ -272,7 +297,6 @@ const MapView: React.FC = () => {
           }
         });
 
-        // Boundaries
         const boundaryLayers = [
           "admin-0-boundary",
           "admin-1-boundary",
@@ -288,7 +312,6 @@ const MapView: React.FC = () => {
           }
         });
 
-        // Transit and rail
         const transitLayers = [
           "road-rail",
           "road-rail-tracks",
@@ -366,8 +389,6 @@ const MapView: React.FC = () => {
       console.log("Map loaded successfully");
       setMap(map);
       setMapReady(true);
-
-      // Apply custom colors after initial load
       applyCustomColors(map, isDark);
     });
 
@@ -377,6 +398,9 @@ const MapView: React.FC = () => {
 
     return () => {
       console.log("Cleaning up map...");
+      if (calibratingTimeoutRef.current) {
+        clearTimeout(calibratingTimeoutRef.current);
+      }
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -387,19 +411,17 @@ const MapView: React.FC = () => {
     };
   }, []);
 
-  // Handle theme changes - update map style
+  // Handle theme changes
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || !mapReady) return;
 
     const newStyle = isDark ? DARK_STYLE : LIGHT_STYLE;
 
-    // Only update if style actually changed
     if (currentStyleRef.current !== newStyle) {
       console.log("Switching map style to:", isDark ? "dark" : "light");
       currentStyleRef.current = newStyle;
 
-      // Store current center and zoom
       const center = map.getCenter();
       const zoom = map.getZoom();
       const bearing = map.getBearing();
@@ -407,14 +429,11 @@ const MapView: React.FC = () => {
 
       map.setStyle(newStyle);
 
-      // Restore view and apply custom colors after style loads
       map.once("style.load", () => {
         map.setCenter(center);
         map.setZoom(zoom);
         map.setBearing(bearing);
         map.setPitch(pitch);
-
-        // Apply custom colors for the new theme
         applyCustomColors(map, isDark);
       });
     }
@@ -489,7 +508,10 @@ const MapView: React.FC = () => {
         </>
       )}
 
-      {/* Info overlay */}
+      {/* Calibrating Indicator - Top Left */}
+      {isCalibrating && <CalibratingIndicator isDark={isDark} />}
+
+      {/* Info overlay - Top Right */}
       <div
         className={`absolute top-4 right-4 backdrop-blur-sm rounded-lg px-4 py-2 text-sm z-10 ${
           isDark ? "bg-dark-900/90" : "bg-white/90 shadow-md"

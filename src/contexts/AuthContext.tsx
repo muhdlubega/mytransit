@@ -13,6 +13,7 @@ interface AuthContextType extends AuthState {
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   continueAsGuest: () => void;
+  exitGuestMode: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -76,6 +77,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, []);
 
+  const exitGuestMode = () => {
+    setIsGuest(false);
+    localStorage.removeItem("mytransit-guest");
+  };
+
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -111,6 +117,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         signUp,
         signOut,
         continueAsGuest,
+        exitGuestMode,
       }}
     >
       {children}

@@ -30,6 +30,7 @@ interface TransitContextType {
   setSelectedFeed: (feed: { type: string; category: string }) => void;
   refreshVehicles: () => Promise<void>;
   getShapeForVehicle: (vehicle: Vehicle) => GTFSShape[] | null;
+  lastDataUpdate: number;
 }
 
 const TransitContext = createContext<TransitContextType | undefined>(undefined);
@@ -65,6 +66,7 @@ export const TransitProvider: React.FC<TransitProviderProps> = ({
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastDataUpdate, setLastDataUpdate] = useState<number>(0);
 
   const lastUpdateRef = useRef<number>(Date.now());
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -211,6 +213,7 @@ export const TransitProvider: React.FC<TransitProviderProps> = ({
       setAllVehicles(enrichedVehicles);
       vehiclesRef.current = enrichedVehicles;
       lastUpdateRef.current = Date.now();
+      setLastDataUpdate(Date.now());
       setIsLoading(false);
 
       // Note: selectedVehicleId is preserved, selectedVehicle will automatically
@@ -318,6 +321,7 @@ export const TransitProvider: React.FC<TransitProviderProps> = ({
         setSelectedFeed,
         refreshVehicles,
         getShapeForVehicle,
+        lastDataUpdate,
       }}
     >
       {children}

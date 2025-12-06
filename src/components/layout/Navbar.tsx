@@ -2,6 +2,7 @@ import React from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { NAV_TABS, NavTabId } from "../../utils/constants";
 import Button from "../ui/Button";
+import logo from "../../assets/logo.png";
 
 interface NavbarProps {
   activeTab: NavTabId | null;
@@ -78,40 +79,42 @@ const TabIcon: React.FC<{ icon: string; active: boolean }> = ({
   return <>{icons[icon]}</>;
 };
 
-const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
-  const { isAuthenticated, isGuest, signOut, user } = useAuth();
+const SignInIcon = () => (
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
+    />
+  </svg>
+);
 
-  const visibleTabs = NAV_TABS.filter(tab => {
-    if (tab.id === "favourites" && isGuest) return false;
-    return true;
-  });
+const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
+  const { isAuthenticated, signOut, user, exitGuestMode } = useAuth();
+
+  const handleSignIn = () => {
+    // Exit guest mode to trigger AuthGuard to show AuthPage
+    exitGuestMode();
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 h-16 bg-dark-900 border-b border-dark-800 z-50">
       <div className="h-full px-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center shadow-lg">
-            <svg
-              className="w-6 h-6 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-              />
-            </svg>
-          </div>
-          <span className="text-xl font-display font-bold text-gradient hidden sm:block">
+          <img src={logo} alt="logo" className="h-10 w-10" />
+          <span className="text-xl font-display font-bold hidden sm:block">
             MyTransit
           </span>
         </div>
 
         <div className="flex items-center gap-1">
-          {visibleTabs.map(tab => (
+          {NAV_TABS.map(tab => (
             <button
               key={tab.id}
               onClick={() => onTabChange(activeTab === tab.id ? null : tab.id)}
@@ -137,11 +140,17 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
                 Sign Out
               </Button>
             </>
-          ) : isGuest ? (
-            <span className="text-sm text-dark-400 font-display">
-              Guest Mode
-            </span>
-          ) : null}
+          ) : (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleSignIn}
+              className="flex items-center gap-2"
+            >
+              <SignInIcon />
+              <span className="hidden md:block">Sign In</span>
+            </Button>
+          )}
         </div>
       </div>
     </nav>
