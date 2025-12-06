@@ -13,6 +13,7 @@ import Button from "./Button";
 
 interface VehiclePopupProps {
   onShowSchedule: () => void;
+  rightSidebarOpen?: boolean;
 }
 
 const CloseIcon = () => (
@@ -47,7 +48,10 @@ const StarIcon = ({ filled }: { filled: boolean }) => (
   </svg>
 );
 
-const VehiclePopup: React.FC<VehiclePopupProps> = ({ onShowSchedule }) => {
+const VehiclePopup: React.FC<VehiclePopupProps> = ({
+  onShowSchedule,
+  rightSidebarOpen = false,
+}) => {
   const { selectedVehicle, setSelectedVehicle } = useTransit();
   const { userLocation, setHighlightedRouteId } = useMap();
   const { isAuthenticated, isGuest } = useAuth();
@@ -96,10 +100,16 @@ const VehiclePopup: React.FC<VehiclePopupProps> = ({ onShowSchedule }) => {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 w-80 bg-dark-900 border border-dark-700 rounded-xl shadow-2xl overflow-hidden animate-slide-in-up z-50">
+    <div
+      className={`
+        fixed bottom-4 w-80 bg-dark-900 border border-dark-700 rounded-xl shadow-2xl overflow-hidden animate-slide-in-up z-50
+        transition-all duration-300 ease-in-out
+        ${rightSidebarOpen ? "right-[400px]" : "right-4"}
+      `}
+    >
       <div className="flex items-center justify-between p-4 border-b border-dark-700 bg-dark-850">
         <div>
-          <h3 className="font-semibold text-white">
+          <h3 className="font-display font-bold text-white">
             {selectedVehicle.label || selectedVehicle.vehicleId}
           </h3>
           <p className="text-sm text-dark-400">{selectedVehicle.routeName}</p>
@@ -115,16 +125,18 @@ const VehiclePopup: React.FC<VehiclePopupProps> = ({ onShowSchedule }) => {
       <div className="p-4 space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <p className="text-xs text-dark-500 uppercase">Speed</p>
-            <p className="text-lg font-semibold text-white">
+            <p className="text-xs text-dark-500 uppercase font-medium">Speed</p>
+            <p className="text-lg font-display font-bold text-white">
               {selectedVehicle.speed
                 ? formatSpeed(selectedVehicle.speed)
-                : "N/A"}
+                : "Stopped"}
             </p>
           </div>
           <div>
-            <p className="text-xs text-dark-500 uppercase">Operator</p>
-            <p className="text-lg font-semibold text-white">
+            <p className="text-xs text-dark-500 uppercase font-medium">
+              Operator
+            </p>
+            <p className="text-lg font-display font-bold text-white">
               {selectedVehicle.operator || "Unknown"}
             </p>
           </div>
@@ -132,7 +144,9 @@ const VehiclePopup: React.FC<VehiclePopupProps> = ({ onShowSchedule }) => {
 
         {selectedVehicle.nextStop && (
           <div>
-            <p className="text-xs text-dark-500 uppercase">Next Stop</p>
+            <p className="text-xs text-dark-500 uppercase font-medium">
+              Next Stop
+            </p>
             <p className="text-white font-medium">{selectedVehicle.nextStop}</p>
           </div>
         )}
@@ -141,19 +155,19 @@ const VehiclePopup: React.FC<VehiclePopupProps> = ({ onShowSchedule }) => {
           <div className="bg-dark-850 rounded-lg p-3">
             <div className="flex justify-between items-center">
               <div>
-                <p className="text-xs text-dark-500 uppercase">
+                <p className="text-xs text-dark-500 uppercase font-medium">
                   Distance to You
                 </p>
-                <p className="text-lg font-semibold text-primary-400">
+                <p className="text-lg font-display font-bold text-primary-400">
                   {formatDistance(distanceToUser)}
                 </p>
               </div>
               {etaToUser && (
                 <div className="text-right">
-                  <p className="text-xs text-dark-500 uppercase">
+                  <p className="text-xs text-dark-500 uppercase font-medium">
                     Est. Arrival
                   </p>
-                  <p className="text-lg font-semibold text-primary-400">
+                  <p className="text-lg font-display font-bold text-primary-400">
                     {etaToUser}
                   </p>
                 </div>

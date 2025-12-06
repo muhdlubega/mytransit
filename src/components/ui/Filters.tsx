@@ -85,15 +85,13 @@ const Filters: React.FC = () => {
     }
   };
 
-  const handleRefresh = async () => {
-    await refreshVehicles();
-  };
-
   return (
     <div className="space-y-4">
       {/* Feed Selection */}
       <div>
-        <h3 className="text-sm font-medium text-dark-400 mb-2">Data Source</h3>
+        <h3 className="text-sm font-display font-semibold text-dark-400 mb-2">
+          Data Source
+        </h3>
         <Select
           value={selectedFeed.category}
           onChange={e => handleFeedChange(e.target.value)}
@@ -106,15 +104,17 @@ const Filters: React.FC = () => {
         variant="secondary"
         fullWidth
         leftIcon={<RefreshIcon />}
-        onClick={handleRefresh}
+        onClick={refreshVehicles}
         disabled={isLoading}
       >
         {isLoading ? "Loading..." : "Refresh Data"}
       </Button>
 
-      {/* Vehicle Type Filter */}
+      {/* Vehicle Type Filter - Only Bus and Train */}
       <div>
-        <h3 className="text-sm font-medium text-dark-400 mb-2">Vehicle Type</h3>
+        <h3 className="text-sm font-display font-semibold text-dark-400 mb-2">
+          Vehicle Type
+        </h3>
         <div className="flex gap-2">
           {VEHICLE_TYPES.map(type => (
             <button
@@ -126,13 +126,13 @@ const Filters: React.FC = () => {
                     filters.vehicleType === type.value ? null : type.value,
                 })
               }
-              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-colors ${
                 filters.vehicleType === type.value
                   ? "bg-primary-500 text-white"
                   : "bg-dark-800 text-dark-300 hover:bg-dark-700"
               }`}
             >
-              {type.icon} {type.label}
+              <span className="mr-1">{type.icon}</span> {type.label}
             </button>
           ))}
         </div>
@@ -140,7 +140,9 @@ const Filters: React.FC = () => {
 
       {/* Location */}
       <div className="pt-2">
-        <h3 className="text-sm font-medium text-dark-400 mb-2">Location</h3>
+        <h3 className="text-sm font-display font-semibold text-dark-400 mb-2">
+          Location
+        </h3>
         <div className="space-y-2">
           <Button
             variant={isLocationEnabled ? "primary" : "secondary"}

@@ -11,10 +11,33 @@
     @apply scroll-smooth;
   }
   
+  /* Dark mode (default) */
   body {
     @apply bg-dark-950 text-white antialiased;
     margin: 0;
     padding: 0;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  /* Light mode */
+  .light body,
+  body.light {
+    @apply bg-gray-50 text-gray-900;
+  }
+
+  .light .bg-dark-950 { @apply bg-gray-50; }
+  .light .bg-dark-900 { @apply bg-white; }
+  .light .bg-dark-850 { @apply bg-gray-100; }
+  .light .bg-dark-800 { @apply bg-gray-200; }
+  .light .bg-dark-700 { @apply bg-gray-300; }
+  .light .text-dark-400 { @apply text-gray-600; }
+  .light .text-dark-500 { @apply text-gray-500; }
+  .light .text-white { @apply text-gray-900; }
+  .light .border-dark-700 { @apply border-gray-300; }
+  .light .border-dark-800 { @apply border-gray-200; }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Rethink Sans', 'Inter', system-ui, sans-serif;
   }
   
   ::-webkit-scrollbar {
@@ -24,20 +47,40 @@
   ::-webkit-scrollbar-track {
     @apply bg-dark-900;
   }
+
+  .light ::-webkit-scrollbar-track {
+    @apply bg-gray-100;
+  }
   
   ::-webkit-scrollbar-thumb {
     @apply bg-dark-700 rounded-full;
+  }
+
+  .light ::-webkit-scrollbar-thumb {
+    @apply bg-gray-400 rounded-full;
   }
   
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-dark-600;
   }
+
+  .light ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-500;
+  }
 }
 
 @layer components {
+  .font-display {
+    font-family: 'Rethink Sans', 'Inter', system-ui, sans-serif;
+  }
+
   .btn {
     @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 
            focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark-900;
+  }
+
+  .light .btn {
+    @apply focus:ring-offset-white;
   }
   
   .btn-primary {
@@ -47,9 +90,17 @@
   .btn-secondary {
     @apply bg-dark-800 hover:bg-dark-700 text-white focus:ring-dark-600;
   }
+
+  .light .btn-secondary {
+    @apply bg-gray-200 hover:bg-gray-300 text-gray-900;
+  }
   
   .btn-ghost {
     @apply bg-transparent hover:bg-dark-800 text-dark-300 hover:text-white;
+  }
+
+  .light .btn-ghost {
+    @apply hover:bg-gray-200 text-gray-600 hover:text-gray-900;
   }
   
   .input {
@@ -58,14 +109,26 @@
            focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500
            transition-all duration-200;
   }
+
+  .light .input {
+    @apply bg-white border-gray-300 text-gray-900 placeholder-gray-400;
+  }
   
   .sidebar {
     @apply fixed top-16 h-[calc(100vh-4rem)] bg-dark-900 border-dark-800 
            overflow-y-auto z-40;
   }
+
+  .light .sidebar {
+    @apply bg-white border-gray-200;
+  }
   
   .card {
     @apply bg-dark-850 border border-dark-800 rounded-xl p-4;
+  }
+
+  .light .card {
+    @apply bg-white border-gray-200;
   }
 }
 
@@ -79,7 +142,7 @@
   }
 }
 
-/* Mapbox overrides */
+/* Mapbox overrides - Dark mode */
 .mapboxgl-popup-content {
   background: #1a1a1a !important;
   color: white !important;
@@ -88,10 +151,20 @@
   border: 1px solid #4f4f4f !important;
 }
 
+.light .mapboxgl-popup-content {
+  background: white !important;
+  color: #1a1a1a !important;
+  border: 1px solid #e5e7eb !important;
+}
+
 .mapboxgl-popup-close-button {
   color: white !important;
   font-size: 20px !important;
   padding: 8px !important;
+}
+
+.light .mapboxgl-popup-close-button {
+  color: #1a1a1a !important;
 }
 
 .mapboxgl-popup-close-button:hover {
@@ -99,8 +172,16 @@
   border-radius: 0 12px 0 0 !important;
 }
 
+.light .mapboxgl-popup-close-button:hover {
+  background: #f3f4f6 !important;
+}
+
 .mapboxgl-popup-tip {
   border-top-color: #1a1a1a !important;
+}
+
+.light .mapboxgl-popup-tip {
+  border-top-color: white !important;
 }
 
 .mapboxgl-ctrl-group {
@@ -108,12 +189,25 @@
   border-color: #4f4f4f !important;
 }
 
+.light .mapboxgl-ctrl-group {
+  background: white !important;
+  border-color: #e5e7eb !important;
+}
+
 .mapboxgl-ctrl-group button {
   color: white !important;
 }
 
+.light .mapboxgl-ctrl-group button {
+  color: #1a1a1a !important;
+}
+
 .mapboxgl-ctrl-group button:hover {
   background: #454545 !important;
+}
+
+.light .mapboxgl-ctrl-group button:hover {
+  background: #f3f4f6 !important;
 }
 
 .mapboxgl-ctrl-attrib {
@@ -121,11 +215,16 @@
   color: #888888 !important;
 }
 
+.light .mapboxgl-ctrl-attrib {
+  background: rgba(255, 255, 255, 0.8) !important;
+  color: #6b7280 !important;
+}
+
 .mapboxgl-ctrl-attrib a {
   color: #CF3476 !important;
 }
 
-/* Custom marker styles */
+/* Vehicle marker styles */
 .vehicle-marker {
   cursor: pointer;
   transition: transform 0.2s ease;
@@ -133,6 +232,7 @@
 
 .vehicle-marker:hover {
   transform: scale(1.1);
+  z-index: 100 !important;
 }
 
 .user-location-marker {

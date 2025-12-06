@@ -4,10 +4,8 @@ export const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY || "";
 export const GOOGLE_MAPS_API_KEY =
   process.env.REACT_APP_GOOGLE_MAPS_API_KEY || "";
 
-// Malaysia GTFS API Base URL
 export const GTFS_API_BASE = "https://api.data.gov.my";
 
-// Available GTFS feeds
 export const GTFS_FEEDS = {
   prasarana: {
     name: "Prasarana",
@@ -27,19 +25,13 @@ export const GTFS_FEEDS = {
     realtimeUrl: () => `${GTFS_API_BASE}/gtfs-realtime/vehicle-position/ktmb`,
     staticUrl: () => `${GTFS_API_BASE}/gtfs-static/ktmb`,
   },
-  mybasJohor: {
-    name: "MyBas Johor",
-    realtimeUrl: () =>
-      `${GTFS_API_BASE}/gtfs-realtime/vehicle-position/mybas-johor`,
-    staticUrl: () => `${GTFS_API_BASE}/gtfs-static/mybas-johor`,
-  },
 } as const;
 
-export const MAP_INITIAL_CENTER: [number, number] = [101.6869, 3.139]; // Kuala Lumpur
+export const MAP_INITIAL_CENTER: [number, number] = [101.6869, 3.139];
 export const MAP_INITIAL_ZOOM = 12;
 
-export const GTFS_REFRESH_INTERVAL = 30000; // 30 seconds
-export const INTERPOLATION_INTERVAL = 100; // 0.1 seconds
+export const GTFS_REFRESH_INTERVAL = 30000;
+export const INTERPOLATION_INTERVAL = 100;
 
 export const OPERATORS = [
   { value: "rapid-bus-mrtfeeder", label: "MRT Feeder Bus" },
@@ -47,13 +39,12 @@ export const OPERATORS = [
   { value: "rapid-bus-penang", label: "Rapid Penang" },
   { value: "rapid-bus-kuantan", label: "Rapid Kuantan" },
   { value: "ktmb", label: "KTMB Train" },
-  { value: "mybas-johor", label: "MyBas Johor" },
 ];
 
+// Only bus and train - removed tram
 export const VEHICLE_TYPES = [
   { value: "bus", label: "Bus", icon: "🚌" },
   { value: "train", label: "Train", icon: "🚆" },
-  { value: "tram", label: "Tram", icon: "🚊" },
 ];
 
 export const NAV_TABS = [

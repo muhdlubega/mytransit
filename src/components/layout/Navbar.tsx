@@ -90,7 +90,7 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
     <nav className="fixed top-0 left-0 right-0 h-16 bg-dark-900 border-b border-dark-800 z-50">
       <div className="h-full px-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center shadow-lg">
             <svg
               className="w-6 h-6 text-white"
               fill="none"
@@ -105,7 +105,7 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
               />
             </svg>
           </div>
-          <span className="text-xl font-bold text-gradient hidden sm:block">
+          <span className="text-xl font-display font-bold text-gradient hidden sm:block">
             MyTransit
           </span>
         </div>
@@ -122,7 +122,7 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
               }`}
             >
               <TabIcon icon={tab.icon} active={activeTab === tab.id} />
-              <span className="hidden md:inline">{tab.label}</span>
+              <span className="hidden md:inline font-display">{tab.label}</span>
             </button>
           ))}
         </div>
@@ -138,7 +138,9 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
               </Button>
             </>
           ) : isGuest ? (
-            <span className="text-sm text-dark-400">Guest Mode</span>
+            <span className="text-sm text-dark-400 font-display">
+              Guest Mode
+            </span>
           ) : null}
         </div>
       </div>
