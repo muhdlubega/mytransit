@@ -238,3 +238,44 @@
 .user-location-marker {
   z-index: 10;
 }
+
+/* Vehicle marker click handling */
+.vehicle-marker {
+  cursor: pointer !important;
+  transition: transform 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.vehicle-marker:hover {
+  z-index: 100 !important;
+}
+
+.vehicle-marker:active {
+  transform: scale(0.95);
+}
+
+.vehicle-marker * {
+  pointer-events: none;
+}
+
+.vehicle-marker .marker-wrapper {
+  pointer-events: auto !important;
+}
+
+/* Ensure mapbox markers don't interfere with clicks */
+.mapboxgl-marker {
+  cursor: pointer !important;
+}
+
+/* Pulse animation for moving indicator */
+@keyframes markerPulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}

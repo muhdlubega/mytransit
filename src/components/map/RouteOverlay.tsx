@@ -9,10 +9,9 @@ interface RouteOverlayProps {
 }
 
 const RouteOverlay: React.FC<RouteOverlayProps> = ({ map }) => {
-  const { highlightedRouteId } = useMap();
   const { selectedVehicle, getShapeForVehicle, staticData } = useTransit();
   const sourceAddedRef = useRef(false);
-  const currentRouteIdRef = useRef<string | null>(null);
+  const currentVehicleIdRef = useRef<string | null>(null);
 
   const clearRoute = useCallback(() => {
     if (!map) return;
@@ -34,13 +33,14 @@ const RouteOverlay: React.FC<RouteOverlayProps> = ({ map }) => {
         map.removeSource("route-stops");
       }
     } catch (e) {
-      // Ignore errors during cleanup
+      console.warn("Error clearing route:", e);
     }
 
     sourceAddedRef.current = false;
-    currentRouteIdRef.current = null;
+    currentVehicleIdRef.current = null;
   }, [map]);
 
+  // Draw route when vehicle is selected
   useEffect(() => {
     if (!map || !map.loaded()) {
       return;
@@ -52,24 +52,25 @@ const RouteOverlay: React.FC<RouteOverlayProps> = ({ map }) => {
       return;
     }
 
+    // Don't redraw if same vehicle
+    if (
+      currentVehicleIdRef.current === selectedVehicle.id &&
+      sourceAddedRef.current
+    ) {
+      return;
+    }
+
     // Get shape for selected vehicle
     const shapePoints =
       selectedVehicle.shapePoints || getShapeForVehicle(selectedVehicle);
 
     if (!shapePoints || shapePoints.length < 2) {
-      console.log("No shape data for vehicle:", selectedVehicle.id);
+      console.log("No shape data available for vehicle:", selectedVehicle.id);
       clearRoute();
       return;
     }
 
-    // Check if route already displayed
-    const routeId =
-      selectedVehicle.shapeId || selectedVehicle.routeId || selectedVehicle.id;
-    if (currentRouteIdRef.current === routeId && sourceAddedRef.current) {
-      return;
-    }
-
-    // Clear existing route
+    // Clear existing route first
     clearRoute();
 
     const coordinates = shapeToCoordinates(shapePoints);
@@ -78,10 +79,11 @@ const RouteOverlay: React.FC<RouteOverlayProps> = ({ map }) => {
       : "#CF3476";
 
     console.log(
-      "Drawing route with",
+      "Drawing route for vehicle:",
+      selectedVehicle.id,
+      "with",
       coordinates.length,
-      "points, color:",
-      routeColor
+      "points"
     );
 
     try {
@@ -98,7 +100,7 @@ const RouteOverlay: React.FC<RouteOverlayProps> = ({ map }) => {
         },
       });
 
-      // Add outline layer (wider, darker)
+      // Add outline layer
       map.addLayer({
         id: "route-highlight-outline",
         type: "line",
@@ -110,7 +112,7 @@ const RouteOverlay: React.FC<RouteOverlayProps> = ({ map }) => {
         paint: {
           "line-color": "#000000",
           "line-width": 8,
-          "line-opacity": 0.5,
+          "line-opacity": 0.4,
         },
       });
 
@@ -130,7 +132,7 @@ const RouteOverlay: React.FC<RouteOverlayProps> = ({ map }) => {
         },
       });
 
-      // Add stops along the route if available
+      // Add stops along the route
       if (staticData?.stopTimes && selectedVehicle.tripId) {
         const tripStopTimes = staticData.stopTimes
           .filter(st => st.tripId === selectedVehicle.tripId)
@@ -180,26 +182,35 @@ const RouteOverlay: React.FC<RouteOverlayProps> = ({ map }) => {
       }
 
       sourceAddedRef.current = true;
-      currentRouteIdRef.current = routeId;
+      currentVehicleIdRef.current = selectedVehicle.id;
 
       // Fit map to show entire route
-      const bounds = coordinates.reduce(
-        (bounds, coord) => bounds.extend(coord as [number, number]),
-        new mapboxgl.LngLatBounds(
-          coordinates[0] as [number, number],
-          coordinates[0] as [number, number]
-        )
-      );
+      if (coordinates.length > 0) {
+        const bounds = coordinates.reduce(
+          (bounds, coord) => bounds.extend(coord as [number, number]),
+          new mapboxgl.LngLatBounds(
+            coordinates[0] as [number, number],
+            coordinates[0] as [number, number]
+          )
+        );
 
-      map.fitBounds(bounds, {
-        padding: { top: 100, bottom: 150, left: 350, right: 50 },
-        maxZoom: 15,
-        duration: 1000,
-      });
+        map.fitBounds(bounds, {
+          padding: { top: 100, bottom: 150, left: 350, right: 50 },
+          maxZoom: 15,
+          duration: 1000,
+        });
+      }
     } catch (error) {
       console.error("Error adding route to map:", error);
     }
-  }, [map, selectedVehicle, getShapeForVehicle, staticData, clearRoute]);
+  }, [
+    map,
+    selectedVehicle?.id,
+    selectedVehicle?.shapePoints,
+    getShapeForVehicle,
+    staticData,
+    clearRoute,
+  ]);
 
   // Cleanup on unmount
   useEffect(() => {

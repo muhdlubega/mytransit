@@ -51,7 +51,9 @@ export const TransitProvider: React.FC<TransitProviderProps> = ({
 }) => {
   const [allVehicles, setAllVehicles] = useState<Vehicle[]>([]);
   const [staticData, setStaticData] = useState<GTFSStaticData | null>(null);
-  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(
+    null
+  );
   const [selectedFeed, setSelectedFeed] = useState({
     type: "prasarana",
     category: "rapid-bus-mrtfeeder",
@@ -63,22 +65,27 @@ export const TransitProvider: React.FC<TransitProviderProps> = ({
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   const lastUpdateRef = useRef<number>(Date.now());
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const interpolationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const staticDataRef = useRef<GTFSStaticData | null>(null);
+  const vehiclesRef = useRef<Vehicle[]>([]);
 
-  // Keep staticDataRef in sync
+  // Keep refs in sync
   useEffect(() => {
     staticDataRef.current = staticData;
   }, [staticData]);
+
+  useEffect(() => {
+    vehiclesRef.current = allVehicles;
+  }, [allVehicles]);
 
   // Get shape for a vehicle
   const getShapeForVehicle = useCallback(
     (vehicle: Vehicle): GTFSShape[] | null => {
       if (!staticDataRef.current) return null;
 
-      // First try to get shape from tripId
       if (vehicle.tripId) {
         const trip = staticDataRef.current.trips.find(
           t => t.tripId === vehicle.tripId
@@ -89,7 +96,6 @@ export const TransitProvider: React.FC<TransitProviderProps> = ({
         }
       }
 
-      // Try to find shape by routeId
       if (vehicle.routeId) {
         const trip = staticDataRef.current.trips.find(
           t => t.routeId === vehicle.routeId
@@ -104,6 +110,17 @@ export const TransitProvider: React.FC<TransitProviderProps> = ({
     },
     []
   );
+
+  // Get selected vehicle from current vehicles list by ID
+  const selectedVehicle = selectedVehicleId
+    ? allVehicles.find(v => v.id === selectedVehicleId) || null
+    : null;
+
+  // Set selected vehicle - store only the ID to preserve selection across updates
+  const setSelectedVehicle = useCallback((vehicle: Vehicle | null) => {
+    console.log("Setting selected vehicle:", vehicle?.id, vehicle?.label);
+    setSelectedVehicleId(vehicle?.id || null);
+  }, []);
 
   // Load static data when feed changes
   useEffect(() => {
@@ -142,7 +159,6 @@ export const TransitProvider: React.FC<TransitProviderProps> = ({
           t => t.tripId === vehicle.tripId
         );
 
-        // Find progress along route
         let progressAlongRoute = 0;
         if (shapePoints && shapePoints.length >= 2) {
           const posInfo = findPositionOnRoute(
@@ -191,9 +207,14 @@ export const TransitProvider: React.FC<TransitProviderProps> = ({
       // Enrich with shape data
       const enrichedVehicles = enrichVehiclesWithShapes(rawVehicles);
 
+      // Update vehicles without affecting selection
       setAllVehicles(enrichedVehicles);
+      vehiclesRef.current = enrichedVehicles;
       lastUpdateRef.current = Date.now();
       setIsLoading(false);
+
+      // Note: selectedVehicleId is preserved, selectedVehicle will automatically
+      // reference the updated vehicle data through the computed value
     } catch (err) {
       console.error("Error refreshing vehicles:", err);
       setError("Failed to fetch vehicle data");
@@ -203,7 +224,6 @@ export const TransitProvider: React.FC<TransitProviderProps> = ({
 
   // Initial load and periodic refresh
   useEffect(() => {
-    // Wait for static data before fetching vehicles
     if (!staticData) return;
 
     refreshVehicles();
@@ -220,13 +240,13 @@ export const TransitProvider: React.FC<TransitProviderProps> = ({
     };
   }, [refreshVehicles, staticData]);
 
-  // Interpolation loop - vehicles follow their route shapes
+  // Interpolation loop
   useEffect(() => {
     const interpolate = () => {
       const now = Date.now();
       const elapsedSeconds = (now - lastUpdateRef.current) / 1000;
 
-      if (elapsedSeconds > 60) return; // Skip if too stale
+      if (elapsedSeconds > 60) return;
 
       setAllVehicles(prevVehicles =>
         prevVehicles.map(vehicle => {
@@ -238,7 +258,6 @@ export const TransitProvider: React.FC<TransitProviderProps> = ({
             };
           }
 
-          // Interpolate along route shape if available
           const interpolated = interpolatePosition(
             vehicle.latitude,
             vehicle.longitude,
@@ -268,16 +287,6 @@ export const TransitProvider: React.FC<TransitProviderProps> = ({
       }
     };
   }, []);
-
-  // Update selected vehicle when vehicles refresh
-  useEffect(() => {
-    if (selectedVehicle) {
-      const updated = allVehicles.find(v => v.id === selectedVehicle.id);
-      if (updated) {
-        setSelectedVehicle(updated);
-      }
-    }
-  }, [allVehicles, selectedVehicle?.id]);
 
   // Filter vehicles
   const filteredVehicles = allVehicles.filter(vehicle => {

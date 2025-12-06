@@ -15,58 +15,61 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
   const { setHighlightedRouteId } = useMap();
   const mapLoadedRef = useRef(false);
 
-  // Create marker element with proper orientation
-  // Icon points UP, tail points DOWN to actual position
+  // Create marker element - standing 90° upright with pointer at bottom
   const createMarkerElement = useCallback(
     (vehicle: Vehicle, isSelected: boolean) => {
       const el = document.createElement("div");
-      el.className = "vehicle-marker cursor-pointer";
+      el.className = "vehicle-marker";
+      el.style.cursor = "pointer";
+      el.style.zIndex = isSelected ? "1000" : "1";
 
       const color = vehicle.routeColor || "CF3476";
-      const size = isSelected ? 48 : 40;
-      const iconSize = isSelected ? 24 : 20;
+      const size = isSelected ? 44 : 36;
+      const iconSize = isSelected ? 22 : 18;
+      const pointerHeight = isSelected ? 14 : 10;
+      const totalHeight = size + pointerHeight;
 
       const isMoving = vehicle.speed && vehicle.speed > 0.5;
 
-      // The marker container - arrow points UP by default, then we rotate based on bearing
+      // Marker stands upright (90°), pointer at bottom points to exact location
       el.innerHTML = `
       <div 
-        class="marker-container"
+        class="marker-wrapper"
         style="
-          position: relative;
           width: ${size}px;
-          height: ${size + 16}px;
+          height: ${totalHeight}px;
           display: flex;
           flex-direction: column;
           align-items: center;
+          pointer-events: auto;
         "
       >
-        <!-- Main circle with icon (top part) -->
+        <!-- Main circle with icon -->
         <div 
+          class="marker-body"
           style="
             width: ${size}px;
             height: ${size}px;
-            background: linear-gradient(135deg, #${color} 0%, #${color}dd 100%);
+            background: linear-gradient(180deg, #${color} 0%, #${color}cc 100%);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             box-shadow: ${
               isSelected
-                ? `0 0 0 3px white, 0 0 0 6px rgba(207, 52, 118, 0.4), 0 4px 16px rgba(0,0,0,0.4)`
-                : `0 3px 12px rgba(0,0,0,0.4)`
+                ? `0 0 0 3px white, 0 0 0 6px rgba(207, 52, 118, 0.5), 0 4px 20px rgba(0,0,0,0.5)`
+                : `0 2px 10px rgba(0,0,0,0.4), 0 0 0 2px rgba(255,255,255,0.2)`
             };
             position: relative;
-            z-index: 2;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
           "
         >
-          <!-- Bus/Train icon pointing UP -->
+          <!-- Vehicle icon - always upright -->
           <svg 
             width="${iconSize}" 
             height="${iconSize}" 
             viewBox="0 0 24 24" 
             fill="white"
-            style="transform: rotate(0deg);"
           >
             ${
               vehicle.vehicleType === "train"
@@ -75,54 +78,44 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
             }
           </svg>
           
-          <!-- Moving indicator -->
+          <!-- Moving indicator pulse -->
           ${
             isMoving
               ? `
             <div style="
               position: absolute;
-              top: -3px;
-              right: -3px;
+              top: -4px;
+              right: -4px;
               width: 14px;
               height: 14px;
               background-color: #22c55e;
               border-radius: 50%;
               border: 2px solid white;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            ">
-              <div style="
-                position: absolute;
-                inset: -4px;
-                background-color: rgba(34, 197, 94, 0.4);
-                border-radius: 50%;
-                animation: markerPulse 1.5s ease-out infinite;
-              "></div>
-            </div>
+              box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            "></div>
           `
               : ""
           }
         </div>
         
-        <!-- Tail/pointer (bottom part) - points to actual position -->
+        <!-- Pointer/tail pointing DOWN to exact position -->
         <div style="
           width: 0;
           height: 0;
-          border-left: 10px solid transparent;
-          border-right: 10px solid transparent;
-          border-top: 14px solid #${color};
-          margin-top: -2px;
-          filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));
-          z-index: 1;
+          border-left: ${pointerHeight * 0.7}px solid transparent;
+          border-right: ${pointerHeight * 0.7}px solid transparent;
+          border-top: ${pointerHeight}px solid #${color}cc;
+          margin-top: -1px;
+          filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));
         "></div>
       </div>
       
       <style>
-        @keyframes markerPulse {
-          0% { transform: scale(1); opacity: 1; }
-          100% { transform: scale(2); opacity: 0; }
+        .vehicle-marker:hover .marker-body {
+          transform: scale(1.1);
         }
-        .vehicle-marker:hover .marker-container > div:first-child {
-          transform: scale(1.05);
+        .vehicle-marker:active .marker-body {
+          transform: scale(0.95);
         }
       </style>
     `;
@@ -132,47 +125,57 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
     []
   );
 
+  // Handle marker click - immediate response
   const handleMarkerClick = useCallback(
-    (vehicle: Vehicle) => {
-      console.log("Vehicle clicked:", vehicle.id, vehicle.label);
+    (vehicle: Vehicle, event?: MouseEvent) => {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
+      console.log("Marker clicked:", vehicle.id, vehicle.label);
+
+      // Set selected vehicle and highlight route immediately
       setSelectedVehicle(vehicle);
       setHighlightedRouteId(vehicle.routeId || null);
     },
     [setSelectedVehicle, setHighlightedRouteId]
   );
 
-  // Wait for map to load
+  // Check if map is loaded
   useEffect(() => {
     if (!map) return;
 
-    const checkMapLoaded = () => {
-      if (map.loaded()) {
+    if (map.loaded()) {
+      mapLoadedRef.current = true;
+    } else {
+      const onLoad = () => {
         mapLoadedRef.current = true;
-      } else {
-        map.once("load", () => {
-          mapLoadedRef.current = true;
-        });
-      }
-    };
-
-    checkMapLoaded();
+      };
+      map.once("load", onLoad);
+      return () => {
+        map.off("load", onLoad);
+      };
+    }
   }, [map]);
 
   // Update markers
   useEffect(() => {
-    if (!map || !mapLoadedRef.current) {
-      if (map && !map.loaded()) {
-        map.once("load", () => {
-          mapLoadedRef.current = true;
-        });
-      }
+    if (!map) return;
+
+    // Wait for map to be ready
+    if (!map.loaded()) {
+      const onLoad = () => {
+        mapLoadedRef.current = true;
+      };
+      map.once("load", onLoad);
       return;
     }
 
     const currentMarkerIds = new Set(vehicles.map(v => v.id));
     const existingMarkerIds = new Set(markersRef.current.keys());
 
-    // Remove old markers
+    // Remove markers for vehicles that no longer exist
     existingMarkerIds.forEach(id => {
       if (!currentMarkerIds.has(id)) {
         const marker = markersRef.current.get(id);
@@ -188,6 +191,7 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
       const lng = vehicle.interpolatedLng ?? vehicle.longitude;
       const lat = vehicle.interpolatedLat ?? vehicle.latitude;
 
+      // Validate coordinates
       if (
         typeof lng !== "number" ||
         typeof lat !== "number" ||
@@ -201,41 +205,48 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
       let marker = markersRef.current.get(vehicle.id);
 
       if (marker) {
-        // Update position
+        // Update existing marker position
         marker.setLngLat([lng, lat]);
 
-        // Update rotation - the bearing indicates direction of travel
-        // We rotate the entire marker so the bus icon "points" in the direction of travel
-        if (vehicle.bearing !== undefined && vehicle.bearing !== null) {
-          marker.setRotation(vehicle.bearing);
-        }
+        // Update element appearance
+        const oldEl = marker.getElement();
+        const newEl = createMarkerElement(vehicle, isSelected);
 
-        // Update appearance if needed
-        const el = marker.getElement();
-        if (el) {
-          const newEl = createMarkerElement(vehicle, isSelected);
-          el.innerHTML = newEl.innerHTML;
+        if (oldEl && oldEl.parentNode) {
+          // Preserve click handler by updating innerHTML only
+          const wrapper = oldEl.querySelector(".marker-wrapper");
+          const newWrapper = newEl.querySelector(".marker-wrapper");
+          if (wrapper && newWrapper) {
+            wrapper.innerHTML = newWrapper.innerHTML;
+          }
+          oldEl.style.zIndex = isSelected ? "1000" : "1";
         }
       } else {
         // Create new marker
         try {
           const el = createMarkerElement(vehicle, isSelected);
 
+          // Add click event listener with capturing to ensure it fires first
+          el.addEventListener("click", e => handleMarkerClick(vehicle, e), {
+            capture: true,
+          });
+          el.addEventListener(
+            "touchend",
+            e => {
+              e.preventDefault();
+              handleMarkerClick(vehicle);
+            },
+            { capture: true, passive: false }
+          );
+
           marker = new mapboxgl.Marker({
             element: el,
-            rotation: vehicle.bearing || 0,
-            rotationAlignment: "map",
-            anchor: "bottom", // Anchor at bottom (the tail) so it points to exact position
+            anchor: "bottom", // Anchor at bottom so pointer tip is at exact position
           }).setLngLat([lng, lat]);
 
+          // Only add if map container exists
           if (map.getContainer()) {
             marker.addTo(map);
-
-            el.addEventListener("click", e => {
-              e.stopPropagation();
-              handleMarkerClick(vehicle);
-            });
-
             markersRef.current.set(vehicle.id, marker);
           }
         } catch (error) {
@@ -251,7 +262,7 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
     handleMarkerClick,
   ]);
 
-  // Cleanup
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       markersRef.current.forEach(marker => {
