@@ -3,7 +3,7 @@ import { NavTabId } from "../../utils/constants";
 import RoutesTab from "../tabs/RoutesTab";
 import FavouritesTab from "../tabs/FavouritesTab";
 import SchedulesTab from "../tabs/SchedulesTab";
-import SuggestionsTab from "../tabs/SuggestionsTab";
+import AboutTab from "../tabs/AboutTab";
 
 interface RightSidebarProps {
   activeTab: NavTabId;
@@ -31,7 +31,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ activeTab, onClose }) => {
     routes: "Plan Route",
     favourites: "My Favourites",
     schedules: "Schedules",
-    suggestions: "Suggestions",
+    about: "About",
   };
 
   const renderTabContent = () => {
@@ -42,8 +42,8 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ activeTab, onClose }) => {
         return <FavouritesTab />;
       case "schedules":
         return <SchedulesTab />;
-      case "suggestions":
-        return <SuggestionsTab />;
+      case "about":
+        return <AboutTab />;
       default:
         return null;
     }

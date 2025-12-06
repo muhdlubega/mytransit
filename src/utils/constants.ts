@@ -51,7 +51,7 @@ export const NAV_TABS = [
   { id: "routes", label: "Routes", icon: "MapPin" },
   { id: "favourites", label: "Favourites", icon: "Star" },
   { id: "schedules", label: "Schedules", icon: "Clock" },
-  { id: "suggestions", label: "Suggestions", icon: "Lightbulb" },
+  { id: "about", label: "About", icon: "Info" },
 ] as const;
 
 export type NavTabId = (typeof NAV_TABS)[number]["id"];
