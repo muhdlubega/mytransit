@@ -4,10 +4,17 @@ import React, {
   useState,
   useRef,
   ReactNode,
+  useCallback,
 } from "react";
 import mapboxgl from "mapbox-gl";
 import { MapViewport, UserLocation } from "../types/map";
 import { MAP_INITIAL_CENTER, MAP_INITIAL_ZOOM } from "../utils/constants";
+import { PlaceDetails, DirectionRoute } from "../services/googleMapsService";
+
+interface RoutePoint {
+  place: PlaceDetails;
+  type: "origin" | "destination";
+}
 
 interface MapContextType {
   map: mapboxgl.Map | null;
@@ -22,6 +29,14 @@ interface MapContextType {
   flyTo: (lng: number, lat: number, zoom?: number) => void;
   highlightedRouteId: string | null;
   setHighlightedRouteId: (routeId: string | null) => void;
+  // Route planning state
+  routeOrigin: PlaceDetails | null;
+  setRouteOrigin: (place: PlaceDetails | null) => void;
+  routeDestination: PlaceDetails | null;
+  setRouteDestination: (place: PlaceDetails | null) => void;
+  selectedDirection: DirectionRoute | null;
+  setSelectedDirection: (route: DirectionRoute | null) => void;
+  clearRoutePoints: () => void;
 }
 
 const MapContext = createContext<MapContextType | undefined>(undefined);
@@ -49,6 +64,15 @@ export const MapProvider: React.FC<MapProviderProps> = ({ children }) => {
   const [highlightedRouteId, setHighlightedRouteId] = useState<string | null>(
     null
   );
+
+  // Route planning state
+  const [routeOrigin, setRouteOrigin] = useState<PlaceDetails | null>(null);
+  const [routeDestination, setRouteDestination] = useState<PlaceDetails | null>(
+    null
+  );
+  const [selectedDirection, setSelectedDirection] =
+    useState<DirectionRoute | null>(null);
+
   const watchIdRef = useRef<number | null>(null);
 
   const enableLocation = () => {
@@ -89,15 +113,24 @@ export const MapProvider: React.FC<MapProviderProps> = ({ children }) => {
     setIsLocationEnabled(false);
   };
 
-  const flyTo = (lng: number, lat: number, zoom = 15) => {
-    if (map) {
-      map.flyTo({
-        center: [lng, lat],
-        zoom,
-        duration: 1500,
-      });
-    }
-  };
+  const flyTo = useCallback(
+    (lng: number, lat: number, zoom = 15) => {
+      if (map) {
+        map.flyTo({
+          center: [lng, lat],
+          zoom,
+          duration: 1500,
+        });
+      }
+    },
+    [map]
+  );
+
+  const clearRoutePoints = useCallback(() => {
+    setRouteOrigin(null);
+    setRouteDestination(null);
+    setSelectedDirection(null);
+  }, []);
 
   return (
     <MapContext.Provider
@@ -114,6 +147,13 @@ export const MapProvider: React.FC<MapProviderProps> = ({ children }) => {
         flyTo,
         highlightedRouteId,
         setHighlightedRouteId,
+        routeOrigin,
+        setRouteOrigin,
+        routeDestination,
+        setRouteDestination,
+        selectedDirection,
+        setSelectedDirection,
+        clearRoutePoints,
       }}
     >
       {children}

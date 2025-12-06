@@ -55,6 +55,7 @@
     ]
   },
   "devDependencies": {
+    "@types/google.maps": "^3.58.1",
     "@types/jszip": "^3.4.1",
     "@types/lodash": "^4.17.21",
     "@types/mapbox-gl": "^3.4.1",

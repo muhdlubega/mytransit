@@ -1,14 +1,11 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useTransit } from "../../contexts/TransitContext";
 import { useMap } from "../../contexts/MapContext";
 import { useAuth } from "../../contexts/AuthContext";
 import { useFavorites } from "../../hooks/useFavorites";
-import {
-  formatSpeed,
-  formatDistance,
-  formatDuration,
-} from "../../utils/formatters";
-import { calculateDistance, getETA } from "../../utils/distance";
+import { formatSpeed, formatDistance } from "../../utils/formatters";
+import { calculateDistance } from "../../utils/distance";
+import { getDrivingTimeToUser } from "../../services/googleMapsService";
 import Button from "./Button";
 
 interface VehiclePopupProps {
@@ -48,14 +45,66 @@ const StarIcon = ({ filled }: { filled: boolean }) => (
   </svg>
 );
 
+const CarIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" />
+  </svg>
+);
+
 const VehiclePopup: React.FC<VehiclePopupProps> = ({
   onShowSchedule,
   rightSidebarOpen = false,
 }) => {
   const { selectedVehicle, setSelectedVehicle } = useTransit();
-  const { userLocation, setHighlightedRouteId } = useMap();
+  const { userLocation, setHighlightedRouteId, isLocationEnabled } = useMap();
   const { isAuthenticated, isGuest } = useAuth();
   const { favorites, addFavorite, removeFavorite } = useFavorites();
+
+  const [drivingETA, setDrivingETA] = useState<string | null>(null);
+  const [isLoadingETA, setIsLoadingETA] = useState(false);
+
+  // Calculate driving ETA when vehicle or user location changes
+  useEffect(() => {
+    const fetchDrivingETA = async () => {
+      if (!selectedVehicle || !userLocation || !isLocationEnabled) {
+        setDrivingETA(null);
+        return;
+      }
+
+      setIsLoadingETA(true);
+      try {
+        const vehicleLat =
+          selectedVehicle.interpolatedLat || selectedVehicle.latitude;
+        const vehicleLng =
+          selectedVehicle.interpolatedLng || selectedVehicle.longitude;
+
+        const result = await getDrivingTimeToUser(
+          vehicleLat,
+          vehicleLng,
+          userLocation.latitude,
+          userLocation.longitude
+        );
+
+        if (result) {
+          setDrivingETA(result.duration);
+        } else {
+          setDrivingETA(null);
+        }
+      } catch (error) {
+        console.error("Error fetching driving ETA:", error);
+        setDrivingETA(null);
+      } finally {
+        setIsLoadingETA(false);
+      }
+    };
+
+    fetchDrivingETA();
+  }, [
+    selectedVehicle?.id,
+    userLocation?.latitude,
+    userLocation?.longitude,
+    isLocationEnabled,
+  ]);
 
   if (!selectedVehicle) return null;
 
@@ -65,7 +114,6 @@ const VehiclePopup: React.FC<VehiclePopupProps> = ({
   const isVehicleFavorite = !!favorite;
 
   let distanceToUser: number | null = null;
-  let etaToUser: string | null = null;
 
   if (userLocation && selectedVehicle) {
     distanceToUser = calculateDistance(
@@ -74,11 +122,6 @@ const VehiclePopup: React.FC<VehiclePopupProps> = ({
       selectedVehicle.interpolatedLat || selectedVehicle.latitude,
       selectedVehicle.interpolatedLng || selectedVehicle.longitude
     );
-
-    if (selectedVehicle.speed && selectedVehicle.speed > 0) {
-      const etaSeconds = getETA(distanceToUser, selectedVehicle.speed);
-      etaToUser = formatDuration(etaSeconds);
-    }
   }
 
   const handleClose = () => {
@@ -151,8 +194,9 @@ const VehiclePopup: React.FC<VehiclePopupProps> = ({
           </div>
         )}
 
-        {userLocation && distanceToUser !== null && (
-          <div className="bg-dark-850 rounded-lg p-3">
+        {/* Distance and ETA to User */}
+        {isLocationEnabled && userLocation && distanceToUser !== null && (
+          <div className="bg-dark-850 rounded-lg p-3 space-y-3">
             <div className="flex justify-between items-center">
               <div>
                 <p className="text-xs text-dark-500 uppercase font-medium">
@@ -162,17 +206,28 @@ const VehiclePopup: React.FC<VehiclePopupProps> = ({
                   {formatDistance(distanceToUser)}
                 </p>
               </div>
-              {etaToUser && (
-                <div className="text-right">
-                  <p className="text-xs text-dark-500 uppercase font-medium">
-                    Est. Arrival
-                  </p>
+              <div className="text-right">
+                <p className="text-xs text-dark-500 uppercase font-medium flex items-center gap-1 justify-end">
+                  <CarIcon />
+                  Driving Time
+                </p>
+                {isLoadingETA ? (
+                  <div className="flex items-center justify-end gap-2 mt-1">
+                    <div className="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : drivingETA ? (
                   <p className="text-lg font-display font-bold text-primary-400">
-                    {etaToUser}
+                    {drivingETA}
                   </p>
-                </div>
-              )}
+                ) : (
+                  <p className="text-sm text-dark-500">N/A</p>
+                )}
+              </div>
             </div>
+            <p className="text-xs text-dark-500">
+              * Time based on current driving conditions from vehicle to your
+              location
+            </p>
           </div>
         )}
 

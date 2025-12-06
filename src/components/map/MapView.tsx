@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import { useMap } from "../../contexts/MapContext";
 import { useTransit } from "../../contexts/TransitContext";
@@ -9,6 +9,7 @@ import {
 } from "../../utils/constants";
 import VehicleMarkers from "./VehicleMarkers";
 import RouteOverlay from "./RouteOverlay";
+import DirectionsOverlay from "./DirectionsOverlay";
 
 mapboxgl.accessToken = MAPBOX_TOKEN;
 
@@ -23,7 +24,6 @@ const MapView: React.FC = () => {
 
   // Initialize map only once
   useEffect(() => {
-    // Prevent multiple initializations
     if (
       initializingRef.current ||
       mapInstanceRef.current ||
@@ -63,7 +63,6 @@ const MapView: React.FC = () => {
       console.error("Map error:", e);
     });
 
-    // Cleanup only when component unmounts
     return () => {
       console.log("Cleaning up map...");
       if (mapInstanceRef.current) {
@@ -74,7 +73,7 @@ const MapView: React.FC = () => {
         initializingRef.current = false;
       }
     };
-  }, []); // Empty deps - run only once
+  }, []);
 
   // Handle user location marker
   useEffect(() => {
@@ -141,6 +140,7 @@ const MapView: React.FC = () => {
         <>
           <VehicleMarkers map={mapInstanceRef.current} vehicles={vehicles} />
           <RouteOverlay map={mapInstanceRef.current} />
+          <DirectionsOverlay map={mapInstanceRef.current} />
         </>
       )}
 
