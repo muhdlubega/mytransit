@@ -4,13 +4,16 @@ A modern web application for tracking real-time public transportation in Malaysi
 
 ## Overview
 
-MyTransit connects to Malaysia's GTFS (General Transit Feed Specification) data to display real-time positions of public transportation vehicles. The app features an interactive map with vehicle tracking, route overlays, search functionality, favorites management, and integration with Google Maps for directions.
+**MyTransit is the first and only public transport app in the Malaysian market to offer true real-time live vehicle tracking.** While the most capable competitor app updates positions only every 30 seconds and suffers from a sluggish, non-user-friendly interface, MyTransit revolutionizes the transit experience with smooth, continuous tracking that updates every 100ms through intelligent interpolation between data refreshes.
+
+This breakthrough allows users to accurately estimate journey times, anticipate delays, plan their trips with confidence, and make informed decisions about their commute. MyTransit connects to Malaysia's GTFS (General Transit Feed Specification) data to display real-time positions of public transportation vehicles, featuring an interactive map with vehicle tracking, route overlays, search functionality, favorites management, and integration with Google Maps for directions.
 
 ## Features
 
 ### Core Functionality
-- **Real-time Vehicle Tracking**: Live positions of buses and trains with 30-second refresh intervals
-- **Vehicle Interpolation**: Smooth 100ms position updates between GTFS data refreshes based on speed and bearing
+- **Real-time Vehicle Tracking**: True live positions of buses and trains with 30-second data refresh intervals
+- **Smooth Vehicle Interpolation**: Industry-leading 100ms position updates between GTFS data refreshes based on speed and bearing for seamless tracking
+- **Journey Estimation**: Accurately predict arrival times and foresee potential delays in real-time
 - **Interactive Map**: Custom-styled Mapbox maps with dark/light mode support
 - **Route Visualization**: Display complete route shapes with progress tracking
 - **Multiple Operators**: Support for Prasarana (RapidKL, MRT Feeder, Rapid Penang, Rapid Kuantan) and KTMB
@@ -401,34 +404,80 @@ MAP_INITIAL_ZOOM = 12
 
 ## Future Enhancements
 
+- [ ] **First-Person Navigation View**: Immersive street-level navigation perspective
+- [ ] **AI Chatbot Integration**: Intelligent assistant for route planning and transit queries
+- [ ] **AI Agent for In-App Navigation**: Smart navigation recommendations based on user preferences and real-time conditions
+- [ ] PWA support for offline functionality
 - [ ] Push notifications for favorite routes
 - [ ] Historical data and analytics
-- [ ] Multi-language support (Malay, Chinese, etc.)
+- [ ] Multi-language support (Malay, Chinese)
 - [ ] Accessibility improvements (ARIA labels, keyboard nav)
 - [ ] Vehicle crowding predictions
 - [ ] Integration with other Malaysian transit systems
 - [ ] Trip planning with multi-modal routing
 
-## Contributing
+## Team
 
-Contributions welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Follow existing code style (TypeScript, Prettier, ESLint)
-4. Test on multiple devices/browsers
-5. Submit pull request with description
+MyTransit is developed by a talented team of developers passionate about improving public transportation accessibility in Malaysia.
 
-## License
+### Lubega - Frontend Developer
 
-MIT License - see LICENSE file for details
+**Full-stack Developer** with expertise in frontend and backend technologies, delivering scalable web applications impacting over 3 million users globally. Skilled in React, TypeScript, Next.js, and Node.js, with proven success in AI-driven automation projects and performance optimizations. Recognized for collaborating effectively across teams to build reliable, high-quality software solutions.
 
-## Acknowledgments
+**Work Experience:**
 
-- **Malaysia Open Data Initiative**: GTFS data providers
-- **Mapbox**: Mapping platform
-- **Supabase**: Backend services
-- **shadcn/ui**: Component library
-- Transit agencies for maintaining GTFS feeds
+**Frontend Developer – Deriv**  
+*August 2023 – Present | Cyberjaya, Malaysia*
+- Maintained and enhanced cashier and payment systems for global web applications serving over 3 million customers, collaborating with backend, design, and QA teams across multiple regions using React, TypeScript, and Agile methodologies
+- Increased unit test coverage to over 80% using Jest, and supported Cypress.io/Testim E2E automation
+- Optimized wallet package performance using Webpack, reducing bundle load size by 74% for faster, more efficient delivery
+- Contributed to the company's low-code platform redesign using Outsystems, improving maintainability and feature rollout speed
+- Earned 3× Stars of Excellence awards for outstanding contributions
+
+**Frontend Full Stack Developer (Freelance) – Mindhive Asia Sdn Bhd**  
+*August 2024 – June 2025 | Shah Alam, Malaysia*
+- Led front-end development for AI-driven solutions in Next.js and React, including document processing and accounts payable/receivable automation
+- Partnered closely with backend engineers (Python, SQL) and designers to implement and integrate REST APIs, authentication, and data management
+- Delivered 4 full projects for ZUS Coffee and contributed to 2 ongoing enterprise projects, earning positive client feedback for quality and timeliness
+- Implemented reusable UI libraries and modular code structures to improve maintainability across multiple client projects
+
+**Technical Skills:**
+- **Frontend**: React, Next.js, TypeScript, JavaScript, HTML5, CSS3, SASS, TailwindCSS, Shadcn, Outsystems
+- **Backend**: Node.js, Python, SQL, Redis, Docker, Firebase, Supabase, Introductory PHP & MySQL knowledge
+- **Mobile**: React Native, Flutter (Dart), Bloc/Cubit architecture
+- **Testing**: Jest, Cypress.io, Testim (unit & E2E testing)
+- **Version Control**: Git, Linux, Ubuntu, CI/CD basics
+- **Cloud & Deployment**: Intro to GCP & AWS, Docker containers
+- **Languages**: English & Malay (Native), German (C1 TELC Hochschule)
+
+---
+
+### Anas - Mobile Developer
+
+**Mobile Application Developer** with a passion for creating exceptional user experiences through the perfect blend of technology and creative design. Specializes in Flutter development with a strong foundation in UI/UX design principles, bringing nearly two years of Flutter experience and recent Swift development skills acquired in 2024.
+
+**Work Experience:**
+
+**Mobile Application Developer – OTA MY SDN. BHD.**  
+*May 2025 – Present | Bangsar, Kuala Lumpur (On-site)*
+- Full-time mobile application development focusing on user-centric solutions
+- Applying UI/UX design expertise to create intuitive mobile experiences
+
+**Mobile Application Developer – Deriv**  
+*August 2023 – May 2025 (1 year 10 months) | Cyberjaya, Selangor (On-site)*
+- Developed mobile applications using Flutter and modern mobile development practices
+- Collaborated with cross-functional teams to deliver high-quality mobile solutions
+- Applied comprehensive skills in web development, software development, user interface design, and 20+ additional technical competencies
+
+**Technical Background:**
+- **Mobile Development**: Flutter (2 years), Swift (2024+), React Native
+- **Frontend**: Bootstrap 5, HTML5, CSS3, JavaScript
+- **Backend Foundation**: MySQL, PhpMyAdmin
+- **UI/UX Design**: Hobby-level expertise informing development decisions
+- **Creative Skills**: Photoshoots, videography, video editing, filming, social media content creation
+
+**Philosophy:**
+Anas combines his software development background with a strong interest in the creative industry, making him highly quality-conscious in all his work. His passion for UI/UX design as a hobby helps him create better user experiences through code, bridging the gap between technical implementation and user-centered design.
 
 ## Support
 
