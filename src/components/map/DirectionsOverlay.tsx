@@ -7,31 +7,41 @@ interface DirectionsOverlayProps {
   map: mapboxgl.Map;
 }
 
+const DEFAULT_ROUTE_COLOR = "#9b2761";
+
 const DirectionsOverlay: React.FC<DirectionsOverlayProps> = ({ map }) => {
-  const { routeOrigin, routeDestination, selectedDirection } = useMap();
+  const { routeOrigin, routeDestination, selectedDirection, routeDisplayMode } =
+    useMap();
+
   const originMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const destinationMarkerRef = useRef<mapboxgl.Marker | null>(null);
-  const routeLayerAddedRef = useRef(false);
+  const layerIdsRef = useRef<string[]>([]);
+  const sourceIdsRef = useRef<string[]>([]);
 
-  // Clear direction route
-  const clearDirectionRoute = useCallback(() => {
+  // Clear all direction layers
+  const clearDirectionLayers = useCallback(() => {
     if (!map) return;
 
     try {
-      if (map.getLayer("directions-route-outline")) {
-        map.removeLayer("directions-route-outline");
-      }
-      if (map.getLayer("directions-route")) {
-        map.removeLayer("directions-route");
-      }
-      if (map.getSource("directions-route")) {
-        map.removeSource("directions-route");
-      }
+      // Remove all step layers
+      layerIdsRef.current.forEach(layerId => {
+        if (map.getLayer(layerId)) {
+          map.removeLayer(layerId);
+        }
+      });
+
+      // Remove all sources
+      sourceIdsRef.current.forEach(sourceId => {
+        if (map.getSource(sourceId)) {
+          map.removeSource(sourceId);
+        }
+      });
     } catch (e) {
-      // Ignore errors
+      console.warn("Error clearing direction layers:", e);
     }
 
-    routeLayerAddedRef.current = false;
+    layerIdsRef.current = [];
+    sourceIdsRef.current = [];
   }, [map]);
 
   // Create marker element
@@ -41,12 +51,7 @@ const DirectionsOverlay: React.FC<DirectionsOverlayProps> = ({ map }) => {
     const label = type === "origin" ? "A" : "B";
 
     el.innerHTML = `
-      <div style="
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      ">
+      <div style="display: flex; flex-direction: column; align-items: center;">
         <div style="
           width: 32px;
           height: 32px;
@@ -60,6 +65,7 @@ const DirectionsOverlay: React.FC<DirectionsOverlayProps> = ({ map }) => {
           font-weight: bold;
           color: white;
           font-size: 14px;
+          font-family: 'Rethink Sans', sans-serif;
         ">${label}</div>
         <div style="
           width: 0;
@@ -79,6 +85,15 @@ const DirectionsOverlay: React.FC<DirectionsOverlayProps> = ({ map }) => {
   useEffect(() => {
     if (!map || !map.loaded()) return;
 
+    // Only show markers when in directions mode
+    if (routeDisplayMode !== "directions") {
+      if (originMarkerRef.current) {
+        originMarkerRef.current.remove();
+        originMarkerRef.current = null;
+      }
+      return;
+    }
+
     if (routeOrigin) {
       if (originMarkerRef.current) {
         originMarkerRef.current.setLngLat([routeOrigin.lng, routeOrigin.lat]);
@@ -95,11 +110,19 @@ const DirectionsOverlay: React.FC<DirectionsOverlayProps> = ({ map }) => {
       originMarkerRef.current.remove();
       originMarkerRef.current = null;
     }
-  }, [map, routeOrigin]);
+  }, [map, routeOrigin, routeDisplayMode]);
 
   // Handle destination marker
   useEffect(() => {
     if (!map || !map.loaded()) return;
+
+    if (routeDisplayMode !== "directions") {
+      if (destinationMarkerRef.current) {
+        destinationMarkerRef.current.remove();
+        destinationMarkerRef.current = null;
+      }
+      return;
+    }
 
     if (routeDestination) {
       if (destinationMarkerRef.current) {
@@ -120,100 +143,100 @@ const DirectionsOverlay: React.FC<DirectionsOverlayProps> = ({ map }) => {
       destinationMarkerRef.current.remove();
       destinationMarkerRef.current = null;
     }
-  }, [map, routeDestination]);
+  }, [map, routeDestination, routeDisplayMode]);
 
-  // Handle direction route display
+  // Handle direction route display with multi-color segments
   useEffect(() => {
     if (!map || !map.loaded()) return;
 
-    if (!selectedDirection || !selectedDirection.polyline) {
-      clearDirectionRoute();
+    // Hide directions when not in directions mode
+    if (routeDisplayMode !== "directions") {
+      clearDirectionLayers();
       return;
     }
 
-    // Decode polyline
-    const coordinates = decodePolyline(selectedDirection.polyline);
-
-    if (coordinates.length < 2) {
-      clearDirectionRoute();
+    if (
+      !selectedDirection ||
+      !selectedDirection.steps ||
+      selectedDirection.steps.length === 0
+    ) {
+      clearDirectionLayers();
       return;
     }
 
-    // Clear existing route
-    clearDirectionRoute();
+    // Clear existing layers
+    clearDirectionLayers();
 
     try {
-      // Add source
-      map.addSource("directions-route", {
-        type: "geojson",
-        data: {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            type: "LineString",
-            coordinates,
+      // Add each step as a separate layer with its own color
+      selectedDirection.steps.forEach((step, index) => {
+        if (!step.polyline) return;
+
+        const coordinates = decodePolyline(step.polyline);
+        if (coordinates.length < 2) return;
+
+        const sourceId = `directions-step-${index}`;
+        const outlineLayerId = `directions-step-outline-${index}`;
+        const layerId = `directions-step-${index}`;
+        const color = step.color || DEFAULT_ROUTE_COLOR;
+
+        // Add source
+        map.addSource(sourceId, {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              type: "LineString",
+              coordinates,
+            },
           },
-        },
+        });
+
+        // Add outline layer
+        map.addLayer({
+          id: outlineLayerId,
+          type: "line",
+          source: sourceId,
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
+          },
+          paint: {
+            "line-color": "#000000",
+            "line-width": 10,
+            "line-opacity": 0.3,
+          },
+        });
+
+        // Add main colored layer
+        map.addLayer({
+          id: layerId,
+          type: "line",
+          source: sourceId,
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
+          },
+          paint: {
+            "line-color": color,
+            "line-width": 6,
+            "line-opacity": 0.9,
+          },
+        });
+
+        sourceIdsRef.current.push(sourceId);
+        layerIdsRef.current.push(outlineLayerId, layerId);
       });
-
-      // Add outline layer
-      map.addLayer({
-        id: "directions-route-outline",
-        type: "line",
-        source: "directions-route",
-        layout: {
-          "line-join": "round",
-          "line-cap": "round",
-        },
-        paint: {
-          "line-color": "#1e3a8a",
-          "line-width": 10,
-          "line-opacity": 0.4,
-        },
-      });
-
-      // Add main route layer
-      map.addLayer({
-        id: "directions-route",
-        type: "line",
-        source: "directions-route",
-        layout: {
-          "line-join": "round",
-          "line-cap": "round",
-        },
-        paint: {
-          "line-color": "#3b82f6",
-          "line-width": 6,
-          "line-opacity": 0.9,
-        },
-      });
-
-      routeLayerAddedRef.current = true;
-
-      // Fit bounds
-      const bounds = selectedDirection.bounds;
-      if (bounds) {
-        map.fitBounds(
-          [
-            [bounds.southwest.lng, bounds.southwest.lat],
-            [bounds.northeast.lng, bounds.northeast.lat],
-          ],
-          {
-            padding: { top: 100, bottom: 150, left: 350, right: 50 },
-            maxZoom: 15,
-            duration: 1000,
-          }
-        );
-      }
     } catch (error) {
-      console.error("Error adding directions route:", error);
+      console.error("Error adding direction route layers:", error);
     }
-  }, [map, selectedDirection, clearDirectionRoute]);
+  }, [map, selectedDirection, routeDisplayMode, clearDirectionLayers]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      clearDirectionRoute();
+      clearDirectionLayers();
       if (originMarkerRef.current) {
         originMarkerRef.current.remove();
       }
@@ -221,7 +244,7 @@ const DirectionsOverlay: React.FC<DirectionsOverlayProps> = ({ map }) => {
         destinationMarkerRef.current.remove();
       }
     };
-  }, [clearDirectionRoute]);
+  }, [clearDirectionLayers]);
 
   return null;
 };

@@ -16,6 +16,44 @@ export interface PlaceDetails {
   lng: number;
 }
 
+export interface TransitLine {
+  name: string;
+  nameShort: string;
+  color: string;
+  textColor: string;
+  vehicleType: string;
+  vehicleIcon: string;
+}
+
+export interface TransitDetails {
+  lineName: string;
+  lineShortName: string;
+  lineColor: string;
+  lineTextColor: string;
+  vehicleType: string;
+  vehicleIcon: string;
+  departureStop: string;
+  arrivalStop: string;
+  departureTime: string;
+  arrivalTime: string;
+  numStops: number;
+  headsign: string;
+}
+
+export interface DirectionStep {
+  instruction: string;
+  distance: string;
+  distanceMeters: number;
+  duration: string;
+  durationSeconds: number;
+  travelMode: string;
+  startLocation: { lat: number; lng: number };
+  endLocation: { lat: number; lng: number };
+  polyline: string;
+  color?: string; // Route color for this segment
+  transitDetails?: TransitDetails;
+}
+
 export interface DirectionRoute {
   summary: string;
   duration: string;
@@ -30,28 +68,13 @@ export interface DirectionRoute {
   };
 }
 
-export interface DirectionStep {
-  instruction: string;
-  distance: string;
-  duration: string;
-  travelMode: string;
-  startLocation: { lat: number; lng: number };
-  endLocation: { lat: number; lng: number };
-  polyline: string;
-  transitDetails?: {
-    lineName: string;
-    lineShortName: string;
-    vehicleType: string;
-    departureStop: string;
-    arrivalStop: string;
-    numStops: number;
-  };
-}
-
 export interface DirectionsResult {
   routes: DirectionRoute[];
   status: string;
 }
+
+// Default color for non-transit segments
+const DEFAULT_ROUTE_COLOR = "#9b2761"; // Darker magenta
 
 // ============================================
 // Places API (New) - Autocomplete
@@ -74,7 +97,7 @@ export const getPlaceAutocomplete = async (
         },
         body: JSON.stringify({
           input,
-          includedRegionCodes: ["my"], // Malaysia
+          includedRegionCodes: ["my"],
           languageCode: "en",
         }),
       }
@@ -194,7 +217,6 @@ export const getDirections = async (
       units: "METRIC",
     };
 
-    // Add transit preferences for transit mode
     if (travelMode === "TRANSIT") {
       requestBody.transitPreferences = {
         routingPreference: "LESS_WALKING",
@@ -202,7 +224,6 @@ export const getDirections = async (
       };
     }
 
-    // Add routing preference for driving
     if (travelMode === "DRIVE") {
       requestBody.routingPreference = "TRAFFIC_AWARE";
     }
@@ -241,18 +262,53 @@ export const getDirections = async (
         );
         const distanceMeters = route.distanceMeters || 0;
 
-        // Extract steps from leg
+        // Parse steps with colors
         const steps: DirectionStep[] = (leg.steps || []).map((step: any) => {
-          const stepDuration = parseInt(
+          const stepDurationSeconds = parseInt(
             step.staticDuration?.replace("s", "") || "0"
           );
+          const stepDistanceMeters = step.distanceMeters || 0;
+
+          // Get color from transit line or use default
+          let color = DEFAULT_ROUTE_COLOR;
+          let transitDetails: TransitDetails | undefined;
+
+          if (step.transitDetails) {
+            const transitLine = step.transitDetails.transitLine || {};
+            color = transitLine.color || DEFAULT_ROUTE_COLOR;
+
+            transitDetails = {
+              lineName: transitLine.name || "",
+              lineShortName: transitLine.nameShort || "",
+              lineColor: transitLine.color || DEFAULT_ROUTE_COLOR,
+              lineTextColor: transitLine.textColor || "#ffffff",
+              vehicleType: transitLine.vehicle?.type || "",
+              vehicleIcon: transitLine.vehicle?.iconUri || "",
+              departureStop:
+                step.transitDetails.stopDetails?.departureStop?.name || "",
+              arrivalStop:
+                step.transitDetails.stopDetails?.arrivalStop?.name || "",
+              departureTime:
+                step.transitDetails.localizedValues?.departureTime?.time
+                  ?.text || "",
+              arrivalTime:
+                step.transitDetails.localizedValues?.arrivalTime?.time?.text ||
+                "",
+              numStops: step.transitDetails.stopCount || 0,
+              headsign: step.transitDetails.headsign || "",
+            };
+          }
 
           return {
-            instruction:
-              step.navigationInstruction?.instructions ||
-              getStepInstruction(step, travelMode),
-            distance: formatDistance(step.distanceMeters || 0),
-            duration: formatDuration(stepDuration),
+            instruction: step.navigationInstruction?.instructions || "",
+            distance:
+              step.localizedValues?.distance?.text ||
+              formatDistance(stepDistanceMeters),
+            distanceMeters: stepDistanceMeters,
+            duration:
+              step.localizedValues?.staticDuration?.text ||
+              formatDuration(stepDurationSeconds),
+            durationSeconds: stepDurationSeconds,
             travelMode: step.travelMode || travelMode,
             startLocation: {
               lat: step.startLocation?.latLng?.latitude || 0,
@@ -263,25 +319,16 @@ export const getDirections = async (
               lng: step.endLocation?.latLng?.longitude || 0,
             },
             polyline: step.polyline?.encodedPolyline || "",
-            transitDetails: step.transitDetails
-              ? {
-                  lineName: step.transitDetails.transitLine?.name || "",
-                  lineShortName:
-                    step.transitDetails.transitLine?.nameShort || "",
-                  vehicleType:
-                    step.transitDetails.transitLine?.vehicle?.type || "",
-                  departureStop:
-                    step.transitDetails.stopDetails?.departureStop?.name || "",
-                  arrivalStop:
-                    step.transitDetails.stopDetails?.arrivalStop?.name || "",
-                  numStops: step.transitDetails.stopCount || 0,
-                }
-              : undefined,
+            color,
+            transitDetails,
           };
         });
 
         return {
-          summary: route.description || `Route ${index + 1}`,
+          summary:
+            route.description ||
+            generateRouteSummary(steps) ||
+            `Route ${index + 1}`,
           duration: formatDuration(durationSeconds),
           durationValue: durationSeconds,
           distance: formatDistance(distanceMeters),
@@ -309,27 +356,15 @@ export const getDirections = async (
   }
 };
 
-// Helper to generate step instruction
-const getStepInstruction = (step: any, travelMode: TravelMode): string => {
-  if (step.transitDetails) {
-    const line = step.transitDetails.transitLine;
-    const departure =
-      step.transitDetails.stopDetails?.departureStop?.name || "";
-    const arrival = step.transitDetails.stopDetails?.arrivalStop?.name || "";
-    return `Take ${
-      line?.nameShort || line?.name || "transit"
-    } from ${departure} to ${arrival}`;
-  }
+// Generate route summary from transit steps
+const generateRouteSummary = (steps: DirectionStep[]): string => {
+  const transitSteps = steps.filter(s => s.transitDetails);
+  if (transitSteps.length === 0) return "";
 
-  if (travelMode === "WALK") {
-    return "Walk to destination";
-  }
-
-  if (travelMode === "DRIVE") {
-    return "Drive to destination";
-  }
-
-  return "Continue to destination";
+  const lines = transitSteps
+    .map(s => s.transitDetails?.lineShortName || s.transitDetails?.lineName)
+    .filter(Boolean);
+  return lines.join(" → ");
 };
 
 // ============================================
@@ -365,7 +400,6 @@ export const getDrivingTimeToUser = async (
 // Utility Functions
 // ============================================
 
-// Format duration from seconds
 const formatDuration = (seconds: number): string => {
   if (seconds < 60) {
     return `${seconds} sec`;
@@ -382,7 +416,6 @@ const formatDuration = (seconds: number): string => {
   return `${hours} hr ${remainingMinutes} min`;
 };
 
-// Format distance from meters
 const formatDistance = (meters: number): string => {
   if (meters < 1000) {
     return `${Math.round(meters)} m`;
@@ -390,7 +423,7 @@ const formatDistance = (meters: number): string => {
   return `${(meters / 1000).toFixed(1)} km`;
 };
 
-// Decode polyline to coordinates
+// Decode polyline to coordinates [lng, lat]
 export const decodePolyline = (encoded: string): [number, number][] => {
   if (!encoded) return [];
 
@@ -425,42 +458,8 @@ export const decodePolyline = (encoded: string): [number, number][] => {
     const dlng = result & 1 ? ~(result >> 1) : result >> 1;
     lng += dlng;
 
-    // Routes API returns coordinates in 1e5 format
     points.push([lng / 1e5, lat / 1e5]);
   }
 
   return points;
-};
-
-// Encode coordinates to polyline (if needed)
-export const encodePolyline = (coordinates: [number, number][]): string => {
-  let encoded = "";
-  let prevLat = 0;
-  let prevLng = 0;
-
-  for (const [lng, lat] of coordinates) {
-    const latE5 = Math.round(lat * 1e5);
-    const lngE5 = Math.round(lng * 1e5);
-
-    encoded += encodeNumber(latE5 - prevLat);
-    encoded += encodeNumber(lngE5 - prevLng);
-
-    prevLat = latE5;
-    prevLng = lngE5;
-  }
-
-  return encoded;
-};
-
-const encodeNumber = (num: number): string => {
-  let encoded = "";
-  let value = num < 0 ? ~(num << 1) : num << 1;
-
-  while (value >= 0x20) {
-    encoded += String.fromCharCode((0x20 | (value & 0x1f)) + 63);
-    value >>= 5;
-  }
-
-  encoded += String.fromCharCode(value + 63);
-  return encoded;
 };

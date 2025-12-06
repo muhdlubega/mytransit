@@ -10,6 +10,7 @@ interface RouteOverlayProps {
 
 const RouteOverlay: React.FC<RouteOverlayProps> = ({ map }) => {
   const { selectedVehicle, getShapeForVehicle, staticData } = useTransit();
+  const { routeDisplayMode, flyToBounds } = useMap();
   const sourceAddedRef = useRef(false);
   const currentVehicleIdRef = useRef<string | null>(null);
 
@@ -40,14 +41,25 @@ const RouteOverlay: React.FC<RouteOverlayProps> = ({ map }) => {
     currentVehicleIdRef.current = null;
   }, [map]);
 
-  // Draw route when vehicle is selected
   useEffect(() => {
-    if (!map || !map.loaded()) {
+    if (!map || !map.loaded()) return;
+
+    // Hide vehicle route when not in vehicle mode
+    if (routeDisplayMode !== "vehicle") {
+      clearRoute();
       return;
     }
 
-    // Clear if no vehicle selected
     if (!selectedVehicle) {
+      clearRoute();
+      return;
+    }
+
+    // Get shape for selected vehicle
+    const shapePoints =
+      selectedVehicle.shapePoints || getShapeForVehicle(selectedVehicle);
+
+    if (!shapePoints || shapePoints.length < 2) {
       clearRoute();
       return;
     }
@@ -60,17 +72,6 @@ const RouteOverlay: React.FC<RouteOverlayProps> = ({ map }) => {
       return;
     }
 
-    // Get shape for selected vehicle
-    const shapePoints =
-      selectedVehicle.shapePoints || getShapeForVehicle(selectedVehicle);
-
-    if (!shapePoints || shapePoints.length < 2) {
-      console.log("No shape data available for vehicle:", selectedVehicle.id);
-      clearRoute();
-      return;
-    }
-
-    // Clear existing route first
     clearRoute();
 
     const coordinates = shapeToCoordinates(shapePoints);
@@ -78,16 +79,7 @@ const RouteOverlay: React.FC<RouteOverlayProps> = ({ map }) => {
       ? `#${selectedVehicle.routeColor}`
       : "#CF3476";
 
-    console.log(
-      "Drawing route for vehicle:",
-      selectedVehicle.id,
-      "with",
-      coordinates.length,
-      "points"
-    );
-
     try {
-      // Add route source
       map.addSource("route-highlight", {
         type: "geojson",
         data: {
@@ -100,7 +92,6 @@ const RouteOverlay: React.FC<RouteOverlayProps> = ({ map }) => {
         },
       });
 
-      // Add outline layer
       map.addLayer({
         id: "route-highlight-outline",
         type: "line",
@@ -116,7 +107,6 @@ const RouteOverlay: React.FC<RouteOverlayProps> = ({ map }) => {
         },
       });
 
-      // Add main route layer
       map.addLayer({
         id: "route-highlight",
         type: "line",
@@ -132,7 +122,7 @@ const RouteOverlay: React.FC<RouteOverlayProps> = ({ map }) => {
         },
       });
 
-      // Add stops along the route
+      // Add stops
       if (staticData?.stopTimes && selectedVehicle.tripId) {
         const tripStopTimes = staticData.stopTimes
           .filter(st => st.tripId === selectedVehicle.tripId)
@@ -144,10 +134,7 @@ const RouteOverlay: React.FC<RouteOverlayProps> = ({ map }) => {
             if (stop && stop.stopLat && stop.stopLon) {
               return {
                 type: "Feature" as const,
-                properties: {
-                  name: stop.stopName,
-                  sequence: st.stopSequence,
-                },
+                properties: { name: stop.stopName },
                 geometry: {
                   type: "Point" as const,
                   coordinates: [stop.stopLon, stop.stopLat],
@@ -184,7 +171,7 @@ const RouteOverlay: React.FC<RouteOverlayProps> = ({ map }) => {
       sourceAddedRef.current = true;
       currentVehicleIdRef.current = selectedVehicle.id;
 
-      // Fit map to show entire route
+      // Fit bounds with offset for sidebar
       if (coordinates.length > 0) {
         const bounds = coordinates.reduce(
           (bounds, coord) => bounds.extend(coord as [number, number]),
@@ -201,7 +188,7 @@ const RouteOverlay: React.FC<RouteOverlayProps> = ({ map }) => {
         });
       }
     } catch (error) {
-      console.error("Error adding route to map:", error);
+      console.error("Error adding vehicle route:", error);
     }
   }, [
     map,
@@ -209,10 +196,10 @@ const RouteOverlay: React.FC<RouteOverlayProps> = ({ map }) => {
     selectedVehicle?.shapePoints,
     getShapeForVehicle,
     staticData,
+    routeDisplayMode,
     clearRoute,
   ]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       clearRoute();

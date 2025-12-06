@@ -12,10 +12,10 @@ interface VehicleMarkersProps {
 const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
   const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
   const { setSelectedVehicle, selectedVehicle } = useTransit();
-  const { setHighlightedRouteId } = useMap();
+  const { setHighlightedRouteId, setRouteDisplayMode, clearRoutePoints } =
+    useMap();
   const mapLoadedRef = useRef(false);
 
-  // Create marker element - standing 90° upright with pointer at bottom
   const createMarkerElement = useCallback(
     (vehicle: Vehicle, isSelected: boolean) => {
       const el = document.createElement("div");
@@ -31,7 +31,6 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
 
       const isMoving = vehicle.speed && vehicle.speed > 0.5;
 
-      // Marker stands upright (90°), pointer at bottom points to exact location
       el.innerHTML = `
       <div 
         class="marker-wrapper"
@@ -44,7 +43,6 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
           pointer-events: auto;
         "
       >
-        <!-- Main circle with icon -->
         <div 
           class="marker-body"
           style="
@@ -64,7 +62,6 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
             transition: transform 0.15s ease, box-shadow 0.15s ease;
           "
         >
-          <!-- Vehicle icon - always upright -->
           <svg 
             width="${iconSize}" 
             height="${iconSize}" 
@@ -78,7 +75,6 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
             }
           </svg>
           
-          <!-- Moving indicator pulse -->
           ${
             isMoving
               ? `
@@ -98,7 +94,6 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
           }
         </div>
         
-        <!-- Pointer/tail pointing DOWN to exact position -->
         <div style="
           width: 0;
           height: 0;
@@ -125,7 +120,7 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
     []
   );
 
-  // Handle marker click - immediate response
+  // Handle marker click - switches to vehicle route display mode
   const handleMarkerClick = useCallback(
     (vehicle: Vehicle, event?: MouseEvent) => {
       if (event) {
@@ -133,16 +128,26 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
         event.stopPropagation();
       }
 
-      console.log("Marker clicked:", vehicle.id, vehicle.label);
+      console.log("Vehicle marker clicked:", vehicle.id, vehicle.label);
 
-      // Set selected vehicle and highlight route immediately
+      // Clear any directions route
+      clearRoutePoints();
+
+      // Set selected vehicle
       setSelectedVehicle(vehicle);
       setHighlightedRouteId(vehicle.routeId || null);
+
+      // Switch to vehicle route display mode
+      setRouteDisplayMode("vehicle");
     },
-    [setSelectedVehicle, setHighlightedRouteId]
+    [
+      setSelectedVehicle,
+      setHighlightedRouteId,
+      setRouteDisplayMode,
+      clearRoutePoints,
+    ]
   );
 
-  // Check if map is loaded
   useEffect(() => {
     if (!map) return;
 
@@ -159,23 +164,19 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
     }
   }, [map]);
 
-  // Update markers
   useEffect(() => {
     if (!map) return;
 
-    // Wait for map to be ready
     if (!map.loaded()) {
-      const onLoad = () => {
+      map.once("load", () => {
         mapLoadedRef.current = true;
-      };
-      map.once("load", onLoad);
+      });
       return;
     }
 
     const currentMarkerIds = new Set(vehicles.map(v => v.id));
     const existingMarkerIds = new Set(markersRef.current.keys());
 
-    // Remove markers for vehicles that no longer exist
     existingMarkerIds.forEach(id => {
       if (!currentMarkerIds.has(id)) {
         const marker = markersRef.current.get(id);
@@ -186,12 +187,10 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
       }
     });
 
-    // Add or update markers
     vehicles.forEach(vehicle => {
       const lng = vehicle.interpolatedLng ?? vehicle.longitude;
       const lat = vehicle.interpolatedLat ?? vehicle.latitude;
 
-      // Validate coordinates
       if (
         typeof lng !== "number" ||
         typeof lat !== "number" ||
@@ -205,15 +204,12 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
       let marker = markersRef.current.get(vehicle.id);
 
       if (marker) {
-        // Update existing marker position
         marker.setLngLat([lng, lat]);
 
-        // Update element appearance
         const oldEl = marker.getElement();
         const newEl = createMarkerElement(vehicle, isSelected);
 
         if (oldEl && oldEl.parentNode) {
-          // Preserve click handler by updating innerHTML only
           const wrapper = oldEl.querySelector(".marker-wrapper");
           const newWrapper = newEl.querySelector(".marker-wrapper");
           if (wrapper && newWrapper) {
@@ -222,11 +218,9 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
           oldEl.style.zIndex = isSelected ? "1000" : "1";
         }
       } else {
-        // Create new marker
         try {
           const el = createMarkerElement(vehicle, isSelected);
 
-          // Add click event listener with capturing to ensure it fires first
           el.addEventListener("click", e => handleMarkerClick(vehicle, e), {
             capture: true,
           });
@@ -241,10 +235,9 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
 
           marker = new mapboxgl.Marker({
             element: el,
-            anchor: "bottom", // Anchor at bottom so pointer tip is at exact position
+            anchor: "bottom",
           }).setLngLat([lng, lat]);
 
-          // Only add if map container exists
           if (map.getContainer()) {
             marker.addTo(map);
             markersRef.current.set(vehicle.id, marker);
@@ -262,7 +255,6 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
     handleMarkerClick,
   ]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       markersRef.current.forEach(marker => {

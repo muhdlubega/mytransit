@@ -11,10 +11,7 @@ import { MapViewport, UserLocation } from "../types/map";
 import { MAP_INITIAL_CENTER, MAP_INITIAL_ZOOM } from "../utils/constants";
 import { PlaceDetails, DirectionRoute } from "../services/googleMapsService";
 
-interface RoutePoint {
-  place: PlaceDetails;
-  type: "origin" | "destination";
-}
+export type RouteDisplayMode = "none" | "directions" | "vehicle";
 
 interface MapContextType {
   map: mapboxgl.Map | null;
@@ -27,6 +24,13 @@ interface MapContextType {
   enableLocation: () => void;
   disableLocation: () => void;
   flyTo: (lng: number, lat: number, zoom?: number) => void;
+  flyToBounds: (
+    bounds: {
+      northeast: { lat: number; lng: number };
+      southwest: { lat: number; lng: number };
+    },
+    padding?: { left: number; right: number }
+  ) => void;
   highlightedRouteId: string | null;
   setHighlightedRouteId: (routeId: string | null) => void;
   // Route planning state
@@ -37,6 +41,9 @@ interface MapContextType {
   selectedDirection: DirectionRoute | null;
   setSelectedDirection: (route: DirectionRoute | null) => void;
   clearRoutePoints: () => void;
+  // Route display mode - determines which route to show
+  routeDisplayMode: RouteDisplayMode;
+  setRouteDisplayMode: (mode: RouteDisplayMode) => void;
 }
 
 const MapContext = createContext<MapContextType | undefined>(undefined);
@@ -64,14 +71,14 @@ export const MapProvider: React.FC<MapProviderProps> = ({ children }) => {
   const [highlightedRouteId, setHighlightedRouteId] = useState<string | null>(
     null
   );
-
-  // Route planning state
   const [routeOrigin, setRouteOrigin] = useState<PlaceDetails | null>(null);
   const [routeDestination, setRouteDestination] = useState<PlaceDetails | null>(
     null
   );
   const [selectedDirection, setSelectedDirection] =
     useState<DirectionRoute | null>(null);
+  const [routeDisplayMode, setRouteDisplayMode] =
+    useState<RouteDisplayMode>("none");
 
   const watchIdRef = useRef<number | null>(null);
 
@@ -126,10 +133,41 @@ export const MapProvider: React.FC<MapProviderProps> = ({ children }) => {
     [map]
   );
 
+  const flyToBounds = useCallback(
+    (
+      bounds: {
+        northeast: { lat: number; lng: number };
+        southwest: { lat: number; lng: number };
+      },
+      padding?: { left: number; right: number }
+    ) => {
+      if (map) {
+        map.fitBounds(
+          [
+            [bounds.southwest.lng, bounds.southwest.lat],
+            [bounds.northeast.lng, bounds.northeast.lat],
+          ],
+          {
+            padding: {
+              top: 100,
+              bottom: 150,
+              left: padding?.left ?? 50,
+              right: padding?.right ?? 50,
+            },
+            maxZoom: 16,
+            duration: 1000,
+          }
+        );
+      }
+    },
+    [map]
+  );
+
   const clearRoutePoints = useCallback(() => {
     setRouteOrigin(null);
     setRouteDestination(null);
     setSelectedDirection(null);
+    setRouteDisplayMode("none");
   }, []);
 
   return (
@@ -145,6 +183,7 @@ export const MapProvider: React.FC<MapProviderProps> = ({ children }) => {
         enableLocation,
         disableLocation,
         flyTo,
+        flyToBounds,
         highlightedRouteId,
         setHighlightedRouteId,
         routeOrigin,
@@ -154,6 +193,8 @@ export const MapProvider: React.FC<MapProviderProps> = ({ children }) => {
         selectedDirection,
         setSelectedDirection,
         clearRoutePoints,
+        routeDisplayMode,
+        setRouteDisplayMode,
       }}
     >
       {children}

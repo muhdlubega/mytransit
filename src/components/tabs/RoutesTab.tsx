@@ -6,8 +6,10 @@ import {
   PlacePrediction,
   PlaceDetails,
   DirectionRoute,
+  DirectionStep,
 } from "../../services/googleMapsService";
 import { useMap } from "../../contexts/MapContext";
+import { useTransit } from "../../contexts/TransitContext";
 import { useDebounce } from "../../hooks/useDebounce";
 import Button from "../ui/Button";
 import LoadingSpinner from "../ui/LoadingSpinner";
@@ -52,6 +54,12 @@ const CloseIcon = () => (
   </svg>
 );
 
+const WalkIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7" />
+  </svg>
+);
+
 const ModeIcon: React.FC<{ mode: TravelMode }> = ({ mode }) => {
   const icons: Record<TravelMode, React.ReactNode> = {
     TRANSIT: (
@@ -88,7 +96,108 @@ const ModeIcon: React.FC<{ mode: TravelMode }> = ({ mode }) => {
   return <>{icons[mode]}</>;
 };
 
-// Place Input Component with Autocomplete
+// Transit Badge Component
+const TransitBadge: React.FC<{ step: DirectionStep }> = ({ step }) => {
+  if (!step.transitDetails) return null;
+
+  const { lineShortName, lineName, lineColor, lineTextColor } =
+    step.transitDetails;
+  const displayName = lineShortName || lineName;
+
+  if (!displayName) return null;
+
+  return (
+    <span
+      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold"
+      style={{
+        backgroundColor: lineColor,
+        color: lineTextColor,
+      }}
+    >
+      {displayName}
+    </span>
+  );
+};
+
+// Step Display Component
+const StepDisplay: React.FC<{ step: DirectionStep; index: number }> = ({
+  step,
+  index,
+}) => {
+  const isTransit = step.travelMode === "TRANSIT" && step.transitDetails;
+  const isWalk = step.travelMode === "WALK";
+
+  return (
+    <div className="flex gap-3 text-sm py-2">
+      {/* Step indicator with line color */}
+      <div className="flex flex-col items-center">
+        <div
+          className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+          style={{
+            backgroundColor: step.color || "#9b2761",
+            color: "#ffffff",
+          }}
+        >
+          {isWalk ? <WalkIcon /> : index + 1}
+        </div>
+        <div
+          className="w-0.5 flex-1 mt-1"
+          style={{ backgroundColor: step.color || "#9b2761" }}
+        />
+      </div>
+
+      <div className="flex-1 min-w-0 pb-3">
+        {/* Transit Badge */}
+        {isTransit && step.transitDetails && (
+          <div className="flex items-center gap-2 mb-1">
+            <TransitBadge step={step} />
+            <span className="text-dark-400 text-xs">
+              {step.transitDetails.vehicleType}
+            </span>
+          </div>
+        )}
+
+        {/* Instruction */}
+        <p className="text-white font-medium">{step.instruction}</p>
+
+        {/* Transit Details */}
+        {isTransit && step.transitDetails && (
+          <div className="mt-2 space-y-1">
+            <div className="flex items-center gap-2 text-xs text-dark-400">
+              <span className="text-green-400">●</span>
+              <span>{step.transitDetails.departureStop}</span>
+              <span className="text-dark-500">
+                ({step.transitDetails.departureTime})
+              </span>
+            </div>
+            {step.transitDetails.numStops > 0 && (
+              <div className="text-xs text-dark-500 pl-4">
+                {step.transitDetails.numStops} stops •{" "}
+                {step.transitDetails.headsign}
+              </div>
+            )}
+            <div className="flex items-center gap-2 text-xs text-dark-400">
+              <span className="text-red-400">●</span>
+              <span>{step.transitDetails.arrivalStop}</span>
+              <span className="text-dark-500">
+                ({step.transitDetails.arrivalTime})
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Duration and Distance */}
+        <div className="flex items-center gap-2 mt-1 text-xs text-dark-500">
+          <span>{step.duration}</span>
+          <span>•</span>
+          <span>{step.distance}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Place Input Component
 interface PlaceInputProps {
   value: string;
   onChange: (value: string) => void;
@@ -169,13 +278,6 @@ const PlaceInput: React.FC<PlaceInputProps> = ({
     }
   };
 
-  const handleClear = () => {
-    onChange("");
-    onClear();
-    setPredictions([]);
-    setIsOpen(false);
-  };
-
   return (
     <div ref={wrapperRef} className="relative">
       <div className="relative">
@@ -186,22 +288,23 @@ const PlaceInput: React.FC<PlaceInputProps> = ({
           type="text"
           value={selectedPlace ? selectedPlace.name : value}
           onChange={e => {
-            if (selectedPlace) {
-              handleClear();
-            }
+            if (selectedPlace) onClear();
             onChange(e.target.value);
           }}
-          onFocus={() => {
-            if (predictions.length > 0 && !selectedPlace) {
-              setIsOpen(true);
-            }
-          }}
+          onFocus={() =>
+            predictions.length > 0 && !selectedPlace && setIsOpen(true)
+          }
           placeholder={placeholder}
           className="input pl-10 pr-10"
         />
         {(selectedPlace || value) && (
           <button
-            onClick={handleClear}
+            onClick={() => {
+              onChange("");
+              onClear();
+              setPredictions([]);
+              setIsOpen(false);
+            }}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-500 hover:text-white p-1 rounded"
           >
             <CloseIcon />
@@ -214,7 +317,6 @@ const PlaceInput: React.FC<PlaceInputProps> = ({
         )}
       </div>
 
-      {/* Predictions Dropdown */}
       {isOpen && predictions.length > 0 && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-dark-850 border border-dark-700 rounded-lg shadow-xl overflow-hidden z-50 max-h-64 overflow-y-auto">
           {predictions.map(prediction => (
@@ -244,11 +346,11 @@ const PlaceInput: React.FC<PlaceInputProps> = ({
   );
 };
 
-// Main Routes Tab Component
+// Main Routes Tab
 const RoutesTab: React.FC = () => {
   const [originInput, setOriginInput] = useState("");
   const [destinationInput, setDestinationInput] = useState("");
-  const [mode, setMode] = useState<TravelMode>("DRIVING");
+  const [mode, setMode] = useState<TravelMode>("TRANSIT");
   const [routes, setRoutes] = useState<DirectionRoute[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -263,12 +365,23 @@ const RoutesTab: React.FC = () => {
     setRouteDestination,
     setSelectedDirection,
     flyTo,
+    flyToBounds,
     userLocation,
     isLocationEnabled,
     clearRoutePoints,
+    setRouteDisplayMode,
   } = useMap();
 
-  // Fly to selected place
+  const { setSelectedVehicle } = useTransit();
+
+  // Clear vehicle selection when using directions
+  useEffect(() => {
+    if (routeOrigin || routeDestination) {
+      setSelectedVehicle(null);
+      setRouteDisplayMode("directions");
+    }
+  }, [routeOrigin, routeDestination, setSelectedVehicle, setRouteDisplayMode]);
+
   useEffect(() => {
     if (routeOrigin) {
       flyTo(routeOrigin.lng, routeOrigin.lat, 14);
@@ -300,14 +413,18 @@ const RoutesTab: React.FC = () => {
         mode
       );
 
-      console.log("Directions result:", result);
-
       if (result.status !== "OK" || result.routes.length === 0) {
         setError("No routes found. Try different locations or travel mode.");
       } else {
         setRoutes(result.routes);
         setSelectedRouteIndex(0);
         setSelectedDirection(result.routes[0]);
+        setRouteDisplayMode("directions");
+
+        // Fit bounds with padding for sidebar
+        if (result.routes[0].bounds) {
+          flyToBounds(result.routes[0].bounds, { left: 350, right: 420 });
+        }
       }
     } catch (err) {
       console.error("Error fetching directions:", err);
@@ -320,6 +437,11 @@ const RoutesTab: React.FC = () => {
   const handleRouteSelect = (index: number) => {
     setSelectedRouteIndex(index);
     setSelectedDirection(routes[index]);
+    setRouteDisplayMode("directions");
+
+    if (routes[index].bounds) {
+      flyToBounds(routes[index].bounds, { left: 350, right: 420 });
+    }
   };
 
   const handleUseMyLocation = () => {
@@ -343,9 +465,10 @@ const RoutesTab: React.FC = () => {
     setRoutes([]);
     setSelectedRouteIndex(null);
     setError(null);
+    setRouteDisplayMode("none");
   };
 
-  const modes: TravelMode[] = ["DRIVING", "TRANSIT", "WALKING", "BICYCLING"];
+  const modes: TravelMode[] = ["TRANSIT", "DRIVING", "WALKING", "BICYCLING"];
   const modeLabels: Record<TravelMode, string> = {
     TRANSIT: "Transit",
     DRIVING: "Drive",
@@ -372,19 +495,7 @@ const RoutesTab: React.FC = () => {
             onClick={handleUseMyLocation}
             className="text-sm text-primary-400 hover:text-primary-300 flex items-center gap-1 ml-1"
           >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
+            <LocationIcon />
             Use my current location
           </button>
         )}
@@ -403,7 +514,6 @@ const RoutesTab: React.FC = () => {
               setDestinationInput(tempInput);
             }}
             className="p-2 bg-dark-800 hover:bg-dark-700 rounded-full transition-colors"
-            title="Swap origin and destination"
           >
             <svg
               className="w-4 h-4 text-dark-400"
@@ -469,7 +579,7 @@ const RoutesTab: React.FC = () => {
         )}
       </div>
 
-      {/* Error Message */}
+      {/* Error */}
       {error && (
         <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
           {error}
@@ -484,71 +594,52 @@ const RoutesTab: React.FC = () => {
           </h3>
 
           {routes.map((route, index) => (
-            <button
+            <div
               key={index}
-              onClick={() => handleRouteSelect(index)}
-              className={`w-full bg-dark-850 rounded-lg p-4 border transition-all text-left ${
+              className={`bg-dark-850 rounded-lg border transition-all ${
                 selectedRouteIndex === index
                   ? "border-primary-500 ring-1 ring-primary-500/50"
                   : "border-dark-700 hover:border-dark-600"
               }`}
             >
-              <div className="flex justify-between items-start mb-2">
-                <div className="flex-1 min-w-0">
-                  <p className="font-display font-semibold text-white truncate">
-                    {route.summary || `Route ${index + 1}`}
-                  </p>
-                  <p className="text-sm text-dark-400">
-                    via {modeLabels[mode]}
-                  </p>
-                </div>
-                <div className="text-right ml-3">
-                  <p className="font-display font-bold text-primary-400">
-                    {route.duration}
-                  </p>
-                  <p className="text-sm text-dark-400">{route.distance}</p>
-                </div>
-              </div>
-
-              {/* Expanded Steps */}
-              {selectedRouteIndex === index && route.steps.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-dark-700 space-y-2">
-                  {route.steps.slice(0, 5).map((step, stepIndex) => (
-                    <div key={stepIndex} className="flex gap-3 text-sm">
-                      <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0 ${
-                          step.transitDetails
-                            ? "bg-primary-500 text-white"
-                            : "bg-dark-700 text-dark-400"
-                        }`}
-                      >
-                        {stepIndex + 1}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-dark-300">{step.instruction}</p>
-                        {step.transitDetails && (
-                          <p className="text-xs text-primary-400 mt-1">
-                            🚌{" "}
-                            {step.transitDetails.lineShortName ||
-                              step.transitDetails.lineName}
-                            {step.transitDetails.numStops > 0 &&
-                              ` • ${step.transitDetails.numStops} stops`}
-                          </p>
-                        )}
-                        <p className="text-xs text-dark-500 mt-0.5">
-                          {step.distance} • {step.duration}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                  {route.steps.length > 5 && (
-                    <p className="text-xs text-dark-500 pl-9">
-                      +{route.steps.length - 5} more steps
+              {/* Route Header - Clickable */}
+              <button
+                onClick={() => handleRouteSelect(index)}
+                className="w-full p-4 text-left"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-display font-semibold text-white">
+                      {route.summary || `Route ${index + 1}`}
                     </p>
-                  )}
+                    <p className="text-sm text-dark-400">
+                      via {modeLabels[mode]}
+                    </p>
+                  </div>
+                  <div className="text-right ml-3">
+                    <p className="font-display font-bold text-primary-400">
+                      {route.duration}
+                    </p>
+                    <p className="text-sm text-dark-400">{route.distance}</p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Full Steps - Always visible when selected */}
+              {selectedRouteIndex === index && route.steps.length > 0 && (
+                <div className="px-4 pb-4 border-t border-dark-700">
+                  <div className="pt-3">
+                    {route.steps.map((step, stepIndex) => (
+                      <StepDisplay
+                        key={stepIndex}
+                        step={step}
+                        index={stepIndex}
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
-            </button>
+            </div>
           ))}
         </div>
       )}
