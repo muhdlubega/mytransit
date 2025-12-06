@@ -8,6 +8,7 @@ interface DirectionsOverlayProps {
 }
 
 const DEFAULT_ROUTE_COLOR = "#9b2761";
+const WALK_COLOR = "#6b7280";
 
 const DirectionsOverlay: React.FC<DirectionsOverlayProps> = ({ map }) => {
   const { routeOrigin, routeDestination, selectedDirection, routeDisplayMode } =
@@ -155,11 +156,7 @@ const DirectionsOverlay: React.FC<DirectionsOverlayProps> = ({ map }) => {
       return;
     }
 
-    if (
-      !selectedDirection ||
-      !selectedDirection.steps ||
-      selectedDirection.steps.length === 0
-    ) {
+    if (!selectedDirection) {
       clearDirectionLayers();
       return;
     }
@@ -168,66 +165,226 @@ const DirectionsOverlay: React.FC<DirectionsOverlayProps> = ({ map }) => {
     clearDirectionLayers();
 
     try {
-      // Add each step as a separate layer with its own color
-      selectedDirection.steps.forEach((step, index) => {
-        if (!step.polyline) return;
+      // Check if we have steps with polylines
+      const hasStepPolylines =
+        selectedDirection.steps &&
+        selectedDirection.steps.length > 0 &&
+        selectedDirection.steps.some(step => step.polyline);
 
-        const coordinates = decodePolyline(step.polyline);
-        if (coordinates.length < 2) return;
+      if (hasStepPolylines) {
+        // Add each step as a separate layer with its own color
+        selectedDirection.steps.forEach((step, index) => {
+          if (!step.polyline) return;
 
-        const sourceId = `directions-step-${index}`;
-        const outlineLayerId = `directions-step-outline-${index}`;
-        const layerId = `directions-step-${index}`;
-        const color = step.color || DEFAULT_ROUTE_COLOR;
+          const coordinates = decodePolyline(step.polyline);
+          if (coordinates.length < 2) return;
 
-        // Add source
-        map.addSource(sourceId, {
-          type: "geojson",
-          data: {
-            type: "Feature",
-            properties: {},
-            geometry: {
-              type: "LineString",
-              coordinates,
+          const sourceId = `directions-step-${index}`;
+          const outlineLayerId = `directions-step-outline-${index}`;
+          const layerId = `directions-step-${index}`;
+
+          // Determine color based on travel mode and transit details
+          let color = DEFAULT_ROUTE_COLOR;
+          let lineWidth = 6;
+          let dashArray: number[] | undefined;
+
+          if (step.travelMode === "WALK") {
+            color = WALK_COLOR;
+            lineWidth = 4;
+            dashArray = [2, 2]; // Dashed line for walking
+          } else if (step.travelMode === "TRANSIT" && step.transitDetails) {
+            color =
+              step.transitDetails.lineColor ||
+              step.color ||
+              DEFAULT_ROUTE_COLOR;
+          } else if (step.color) {
+            color = step.color;
+          }
+
+          // Add source
+          map.addSource(sourceId, {
+            type: "geojson",
+            data: {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                type: "LineString",
+                coordinates,
+              },
             },
-          },
-        });
+          });
 
-        // Add outline layer
-        map.addLayer({
-          id: outlineLayerId,
-          type: "line",
-          source: sourceId,
-          layout: {
-            "line-join": "round",
-            "line-cap": "round",
-          },
-          paint: {
-            "line-color": "#000000",
-            "line-width": 10,
-            "line-opacity": 0.3,
-          },
-        });
+          // Add outline layer
+          map.addLayer({
+            id: outlineLayerId,
+            type: "line",
+            source: sourceId,
+            layout: {
+              "line-join": "round",
+              "line-cap": "round",
+            },
+            paint: {
+              "line-color": "#000000",
+              "line-width": lineWidth + 4,
+              "line-opacity": 0.3,
+            },
+          });
 
-        // Add main colored layer
-        map.addLayer({
-          id: layerId,
-          type: "line",
-          source: sourceId,
-          layout: {
-            "line-join": "round",
-            "line-cap": "round",
-          },
-          paint: {
+          // Add main colored layer
+          const paintConfig: mapboxgl.LinePaint = {
             "line-color": color,
-            "line-width": 6,
+            "line-width": lineWidth,
             "line-opacity": 0.9,
-          },
-        });
+          };
 
-        sourceIdsRef.current.push(sourceId);
-        layerIdsRef.current.push(outlineLayerId, layerId);
-      });
+          if (dashArray) {
+            paintConfig["line-dasharray"] = dashArray;
+          }
+
+          map.addLayer({
+            id: layerId,
+            type: "line",
+            source: sourceId,
+            layout: {
+              "line-join": "round",
+              "line-cap": "round",
+            },
+            paint: paintConfig,
+          });
+
+          sourceIdsRef.current.push(sourceId);
+          layerIdsRef.current.push(outlineLayerId, layerId);
+        });
+      } else if (selectedDirection.polyline) {
+        // Fallback: Use the overall route polyline if steps don't have polylines
+        const coordinates = decodePolyline(selectedDirection.polyline);
+        if (coordinates.length >= 2) {
+          const sourceId = "directions-route";
+          const outlineLayerId = "directions-route-outline";
+          const layerId = "directions-route-main";
+
+          map.addSource(sourceId, {
+            type: "geojson",
+            data: {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                type: "LineString",
+                coordinates,
+              },
+            },
+          });
+
+          map.addLayer({
+            id: outlineLayerId,
+            type: "line",
+            source: sourceId,
+            layout: {
+              "line-join": "round",
+              "line-cap": "round",
+            },
+            paint: {
+              "line-color": "#000000",
+              "line-width": 10,
+              "line-opacity": 0.3,
+            },
+          });
+
+          map.addLayer({
+            id: layerId,
+            type: "line",
+            source: sourceId,
+            layout: {
+              "line-join": "round",
+              "line-cap": "round",
+            },
+            paint: {
+              "line-color": DEFAULT_ROUTE_COLOR,
+              "line-width": 6,
+              "line-opacity": 0.9,
+            },
+          });
+
+          sourceIdsRef.current.push(sourceId);
+          layerIdsRef.current.push(outlineLayerId, layerId);
+        }
+      }
+
+      // Add transit stop markers for transit routes
+      if (selectedDirection.steps) {
+        selectedDirection.steps.forEach((step, stepIndex) => {
+          if (step.travelMode === "TRANSIT" && step.transitDetails) {
+            const { departureStop, arrivalStop } = step.transitDetails;
+            const lineColor =
+              step.transitDetails.lineColor || DEFAULT_ROUTE_COLOR;
+
+            // Add departure stop marker
+            if (step.startLocation) {
+              const depSourceId = `transit-stop-dep-${stepIndex}`;
+              map.addSource(depSourceId, {
+                type: "geojson",
+                data: {
+                  type: "Feature",
+                  properties: { name: departureStop },
+                  geometry: {
+                    type: "Point",
+                    coordinates: [
+                      step.startLocation.lng,
+                      step.startLocation.lat,
+                    ],
+                  },
+                },
+              });
+
+              map.addLayer({
+                id: `transit-stop-dep-${stepIndex}`,
+                type: "circle",
+                source: depSourceId,
+                paint: {
+                  "circle-radius": 6,
+                  "circle-color": "#ffffff",
+                  "circle-stroke-width": 3,
+                  "circle-stroke-color": lineColor,
+                },
+              });
+
+              sourceIdsRef.current.push(depSourceId);
+              layerIdsRef.current.push(`transit-stop-dep-${stepIndex}`);
+            }
+
+            // Add arrival stop marker
+            if (step.endLocation) {
+              const arrSourceId = `transit-stop-arr-${stepIndex}`;
+              map.addSource(arrSourceId, {
+                type: "geojson",
+                data: {
+                  type: "Feature",
+                  properties: { name: arrivalStop },
+                  geometry: {
+                    type: "Point",
+                    coordinates: [step.endLocation.lng, step.endLocation.lat],
+                  },
+                },
+              });
+
+              map.addLayer({
+                id: `transit-stop-arr-${stepIndex}`,
+                type: "circle",
+                source: arrSourceId,
+                paint: {
+                  "circle-radius": 6,
+                  "circle-color": "#ffffff",
+                  "circle-stroke-width": 3,
+                  "circle-stroke-color": lineColor,
+                },
+              });
+
+              sourceIdsRef.current.push(arrSourceId);
+              layerIdsRef.current.push(`transit-stop-arr-${stepIndex}`);
+            }
+          }
+        });
+      }
     } catch (error) {
       console.error("Error adding direction route layers:", error);
     }

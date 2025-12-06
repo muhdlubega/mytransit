@@ -21,12 +21,12 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
       const el = document.createElement("div");
       el.className = "vehicle-marker";
       el.style.cursor = "pointer";
-      el.style.zIndex = isSelected ? "1000" : "1";
+      el.style.zIndex = isSelected ? "10" : "1";
 
       const color = vehicle.routeColor || "CF3476";
-      const size = isSelected ? 44 : 36;
-      const iconSize = isSelected ? 22 : 18;
-      const pointerHeight = isSelected ? 14 : 10;
+      const size = 36;
+      const iconSize = 18;
+      const pointerHeight = 10;
       const totalHeight = size + pointerHeight;
 
       const isMoving = vehicle.speed && vehicle.speed > 0.5;
@@ -215,7 +215,7 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
           if (wrapper && newWrapper) {
             wrapper.innerHTML = newWrapper.innerHTML;
           }
-          oldEl.style.zIndex = isSelected ? "1000" : "1";
+          oldEl.style.zIndex = isSelected ? "10" : "1";
         }
       } else {
         try {

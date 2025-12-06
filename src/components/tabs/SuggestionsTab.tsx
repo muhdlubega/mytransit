@@ -42,9 +42,9 @@ const SuggestionsTab: React.FC = () => {
   };
 
   const categories = [
-    { id: "feature" as const, label: "New Feature", icon: "✨" },
-    { id: "bug" as const, label: "Report Bug", icon: "🐛" },
-    { id: "improvement" as const, label: "Improvement", icon: "💡" },
+    { id: "feature" as const, label: "Feature", icon: "" },
+    { id: "bug" as const, label: "Report Bug", icon: "" },
+    { id: "improvement" as const, label: "Improvement", icon: "" },
   ];
 
   const upcomingFeatures = [

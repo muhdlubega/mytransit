@@ -2,17 +2,27 @@ import React, { useState } from "react";
 import LoginForm from "./LoginForm";
 import SignupForm from "./SignupForm";
 import { useAuth } from "../../contexts/AuthContext";
+import bgImage from "../../assets/cover.png";
 
 const AuthPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
   const { continueAsGuest } = useAuth();
 
   return (
-    <div className="min-h-screen bg-dark-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden">
+      <div
+        className="absolute inset-0 bg-cover bg-center filter blur-[2px] [will-change:filter]"
+        style={{ backgroundImage: `url(${bgImage})` }}
+      />
+
+      <div className="absolute inset-0 bg-black/40" />
+
+      <div className="relative w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gradient mb-2">MyTransit</h1>
-          <p className="text-dark-400">Real-time public transport tracking</p>
+          <h1 className="text-6xl font-bold text-gradient mb-2">MyTransit</h1>
+          <p className="text-xl text-dark-200">
+            Real-time public transport tracking
+          </p>
         </div>
 
         <div className="card">

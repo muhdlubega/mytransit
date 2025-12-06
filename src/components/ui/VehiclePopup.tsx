@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useTransit } from "../../contexts/TransitContext";
 import { useMap } from "../../contexts/MapContext";
 import { useAuth } from "../../contexts/AuthContext";
@@ -55,13 +55,47 @@ const VehiclePopup: React.FC<VehiclePopupProps> = ({
   onShowSchedule,
   rightSidebarOpen = false,
 }) => {
-  const { selectedVehicle, setSelectedVehicle } = useTransit();
+  const { selectedVehicle, setSelectedVehicle, staticData } = useTransit();
   const { userLocation, setHighlightedRouteId, isLocationEnabled } = useMap();
   const { isAuthenticated, isGuest } = useAuth();
   const { favorites, addFavorite, removeFavorite } = useFavorites();
 
   const [drivingETA, setDrivingETA] = useState<string | null>(null);
   const [isLoadingETA, setIsLoadingETA] = useState(false);
+
+  // Calculate next station from schedule data
+  const nextStationName = useMemo(() => {
+    if (!selectedVehicle || !staticData) return null;
+
+    // First check if vehicle already has nextStop populated
+    if (selectedVehicle.nextStop) {
+      return selectedVehicle.nextStop;
+    }
+
+    // If not, calculate from static data
+    if (!selectedVehicle.tripId) return null;
+
+    const tripStopTimes = staticData.stopTimes
+      .filter(st => st.tripId === selectedVehicle.tripId)
+      .sort((a, b) => a.stopSequence - b.stopSequence);
+
+    if (tripStopTimes.length === 0) return null;
+
+    const currentSequence = selectedVehicle.stopSequence || 0;
+
+    // Find the next stop based on current stop sequence
+    const nextStopTime = tripStopTimes.find(
+      st => st.stopSequence > currentSequence
+    );
+
+    if (!nextStopTime) {
+      // Vehicle might be at or past the last stop
+      return null;
+    }
+
+    const stop = staticData.stops.find(s => s.stopId === nextStopTime.stopId);
+    return stop?.stopName || null;
+  }, [selectedVehicle, staticData]);
 
   // Calculate driving ETA when vehicle or user location changes
   useEffect(() => {
@@ -185,12 +219,13 @@ const VehiclePopup: React.FC<VehiclePopupProps> = ({
           </div>
         </div>
 
-        {selectedVehicle.nextStop && (
-          <div>
-            <p className="text-xs text-dark-500 uppercase font-medium">
-              Next Stop
+        {/* Next Station from Schedule */}
+        {nextStationName && (
+          <div className="bg-dark-850 rounded-lg p-3">
+            <p className="text-xs text-dark-500 uppercase font-medium mb-1">
+              Next Station
             </p>
-            <p className="text-white font-medium">{selectedVehicle.nextStop}</p>
+            <p className="text-white font-medium">{nextStationName}</p>
           </div>
         )}
 

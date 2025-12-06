@@ -10,7 +10,7 @@ interface RouteOverlayProps {
 
 const RouteOverlay: React.FC<RouteOverlayProps> = ({ map }) => {
   const { selectedVehicle, getShapeForVehicle, staticData } = useTransit();
-  const { routeDisplayMode, flyToBounds } = useMap();
+  const { routeDisplayMode } = useMap();
   const sourceAddedRef = useRef(false);
   const currentVehicleIdRef = useRef<string | null>(null);
 
@@ -182,7 +182,7 @@ const RouteOverlay: React.FC<RouteOverlayProps> = ({ map }) => {
         );
 
         map.fitBounds(bounds, {
-          padding: { top: 100, bottom: 150, left: 350, right: 50 },
+          padding: { top: 100, bottom: 150, left: 200, right: 500 },
           maxZoom: 15,
           duration: 1000,
         });
