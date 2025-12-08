@@ -65,7 +65,7 @@ This breakthrough allows users to accurately estimate journey times, anticipate 
 
 ## Project Structure
 
-\`\`\`
+```
 mytransit/
 ├── src/
 │   ├── components/           # React components
@@ -126,7 +126,7 @@ mytransit/
 ├── package.json
 ├── tsconfig.json
 └── tailwind.config.ts
-\`\`\`
+```
 
 ## Core Components
 
@@ -299,12 +299,12 @@ When a vehicle is selected:
 
 Create a `.env` file with:
 
-\`\`\`bash
+```bash
 REACT_APP_MAPBOX_ACCESS_TOKEN=your_mapbox_token
 REACT_APP_SUPABASE_URL=your_supabase_url
 REACT_APP_SUPABASE_ANON_KEY=your_supabase_anon_key
 REACT_APP_GOOGLE_MAPS_API_KEY=your_google_maps_key
-\`\`\`
+```
 
 ### Getting API Keys
 
@@ -329,7 +329,7 @@ REACT_APP_GOOGLE_MAPS_API_KEY=your_google_maps_key
 
 ## Installation & Setup
 
-\`\`\`bash
+```bash
 # Clone the repository
 git clone <repository-url>
 cd mytransit
@@ -348,7 +348,7 @@ npm run build
 
 # Start production server
 npm start
-\`\`\`
+```
 
 ## Supported Transit Operators
 
@@ -371,12 +371,12 @@ npm start
 
 Located in `src/utils/constants.ts`:
 
-\`\`\`typescript
+```typescript
 GTFS_REFRESH_INTERVAL = 30000     // 30 seconds
 INTERPOLATION_INTERVAL = 100      // 100ms
 MAP_INITIAL_CENTER = [101.6869, 3.139]  // Kuala Lumpur
 MAP_INITIAL_ZOOM = 12
-\`\`\`
+```
 
 ## Browser Support
 
