@@ -1,4 +1,7 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+"use client";
+
+import type React from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import mapboxgl from "mapbox-gl";
 import { useMap } from "../../contexts/MapContext";
 import { useTransit } from "../../contexts/TransitContext";
@@ -11,6 +14,7 @@ import {
 import VehicleMarkers from "./VehicleMarkers";
 import RouteOverlay from "./RouteOverlay";
 import DirectionsOverlay from "./DirectionsOverlay";
+import RobotAssistant from "./RobotAssistant";
 
 mapboxgl.accessToken = MAPBOX_TOKEN;
 
@@ -93,7 +97,17 @@ const CalibratingIndicator: React.FC<{ isDark: boolean }> = ({ isDark }) => (
   </div>
 );
 
-const MapView: React.FC = () => {
+interface MapViewProps {
+  onOpenChatBot: (message?: string) => void;
+  showChatBot: boolean;
+  onToggleChatBot: () => void;
+}
+
+const MapView: React.FC<MapViewProps> = ({
+  onOpenChatBot,
+  showChatBot,
+  onToggleChatBot,
+}) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<mapboxgl.Map | null>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -497,7 +511,7 @@ const MapView: React.FC = () => {
   }, [userLocation, isLocationEnabled, mapReady]);
 
   return (
-    <div className="relative h-[calc(100vh-4rem)]">
+    <div className="relative h-[calc(100vh-4rem)] overflow-hidden">
       <div ref={mapContainer} className="absolute inset-0" />
 
       {mapReady && mapInstanceRef.current && (
@@ -506,6 +520,14 @@ const MapView: React.FC = () => {
           <RouteOverlay map={mapInstanceRef.current} />
           <DirectionsOverlay map={mapInstanceRef.current} />
         </>
+      )}
+
+      {mapReady && (
+        <RobotAssistant
+          onToggle={onToggleChatBot}
+          isDark={isDark}
+          isActive={showChatBot}
+        />
       )}
 
       {/* Calibrating Indicator - Top Left */}

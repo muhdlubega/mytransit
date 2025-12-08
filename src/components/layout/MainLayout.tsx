@@ -1,11 +1,17 @@
-import React, { useState, useCallback } from "react";
+"use client";
+
+import type React from "react";
+import { useState, useCallback } from "react";
 import Navbar from "./Navbar";
 import LeftSidebar from "./LeftSidebar";
 import RightSidebar from "./RightSidebar";
 import MapView from "../map/MapView";
 import VehiclePopup from "../ui/VehiclePopup";
-import { NavTabId } from "../../utils/constants";
+import ChatBot from "../map/ChatBot";
+import type { NavTabId } from "../../utils/constants";
 import { useTransit } from "../../contexts/TransitContext";
+import { useMap } from "../../contexts/MapContext";
+import type { PlaceDetails } from "../../services/googleMapsService";
 
 const MenuIcon = () => (
   <svg
@@ -26,11 +32,53 @@ const MenuIcon = () => (
 const MainLayout: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTabId | null>(null);
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(false);
+  const [showChatBot, setShowChatBot] = useState(false);
+  const [chatInitialMessage, setChatInitialMessage] = useState<
+    string | undefined
+  >(undefined);
   const { selectedVehicle } = useTransit();
+  const {
+    setRouteDestination,
+    setRouteOrigin,
+    userLocation,
+    isLocationEnabled,
+  } = useMap();
 
   const handleShowSchedule = useCallback(() => {
     setActiveTab("schedules");
   }, []);
+
+  const handleOpenChatBot = useCallback((message?: string) => {
+    setChatInitialMessage(message);
+    setShowChatBot(true);
+  }, []);
+
+  const handleToggleChatBot = useCallback(() => {
+    setShowChatBot(prev => !prev);
+    if (showChatBot) {
+      setChatInitialMessage(undefined);
+    }
+  }, [showChatBot]);
+
+  const handleSelectDestination = useCallback(
+    (place: PlaceDetails) => {
+      setRouteDestination(place);
+
+      if (isLocationEnabled && userLocation) {
+        const userPlace: PlaceDetails = {
+          placeId: "user-location",
+          name: "My Location",
+          address: "Current Location",
+          lat: userLocation.latitude,
+          lng: userLocation.longitude,
+        };
+        setRouteOrigin(userPlace);
+      }
+
+      setActiveTab("routes");
+    },
+    [setRouteDestination, setRouteOrigin, userLocation, isLocationEnabled]
+  );
 
   return (
     <div className="min-h-screen bg-dark-950">
@@ -51,13 +99,18 @@ const MainLayout: React.FC = () => {
         />
 
         <main className="flex-1 lg:ml-80 relative">
-          <MapView />
+          <MapView
+            onOpenChatBot={handleOpenChatBot}
+            showChatBot={showChatBot}
+            onToggleChatBot={handleToggleChatBot}
+          />
         </main>
 
         {activeTab && (
           <RightSidebar
             activeTab={activeTab}
             onClose={() => setActiveTab(null)}
+            onOpenChatBot={handleOpenChatBot}
           />
         )}
       </div>
@@ -69,6 +122,16 @@ const MainLayout: React.FC = () => {
           rightSidebarOpen={activeTab !== null}
         />
       )}
+
+      <ChatBot
+        isOpen={showChatBot}
+        onClose={() => {
+          setShowChatBot(false);
+          setChatInitialMessage(undefined);
+        }}
+        onSelectDestination={handleSelectDestination}
+        initialMessage={chatInitialMessage}
+      />
     </div>
   );
 };

@@ -1,6 +1,9 @@
-import React, { useEffect, useRef, useCallback } from "react";
+"use client";
+
+import type React from "react";
+import { useEffect, useRef, useCallback } from "react";
 import mapboxgl from "mapbox-gl";
-import { Vehicle } from "../../types/vehicle";
+import type { Vehicle } from "../../types/vehicle";
 import { useTransit } from "../../contexts/TransitContext";
 import { useMap } from "../../contexts/MapContext";
 
@@ -11,7 +14,7 @@ interface VehicleMarkersProps {
 
 const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
   const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
-  const { setSelectedVehicle, selectedVehicle } = useTransit();
+  const { setSelectedVehicle, selectedVehicle, showVehicles } = useTransit();
   const { setHighlightedRouteId, setRouteDisplayMode, clearRoutePoints } =
     useMap();
   const mapLoadedRef = useRef(false);
@@ -70,7 +73,7 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
           >
             ${
               vehicle.vehicleType === "train"
-                ? `<path d="M12 2c-4 0-8 .5-8 4v9.5C4 17.43 5.57 19 7.5 19L6 20.5v.5h2.23l2-2H14l2 2h2v-.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5V6c0-3.5-3.58-4-8-4zM7.5 17c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm3.5-7H6V6h5v4zm2 0V6h5v4h-5zm3.5 7c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>`
+                ? `<path d="M12 2c-4 0-8 .5-8 4v9.5C4 17.43 5.57 19 7.5 19L6 20.5v.5h2.23l2-2H14l2 2h2v-.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5V6c0-3.5-3.58-4-8-4s-8 .5-8 4v8zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6H6V8h12v3z"/>`
                 : `<path d="M4 16c0 1.1.9 2 2 2h1v1c0 .55.45 1 1 1s1-.45 1-1v-1h6v1c0 .55.45 1 1 1s1-.45 1-1v-1h1c1.1 0 2-.9 2-2V8c0-3.5-3.58-4-8-4s-8 .5-8 4v8zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6H6V8h12v3z"/>`
             }
           </svg>
@@ -174,6 +177,13 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
       return;
     }
 
+    if (!showVehicles) {
+      // Hide all markers when showVehicles is false
+      markersRef.current.forEach(marker => marker.remove());
+      markersRef.current.clear();
+      return;
+    }
+
     const currentMarkerIds = new Set(vehicles.map(v => v.id));
     const existingMarkerIds = new Set(markersRef.current.keys());
 
@@ -253,6 +263,7 @@ const VehicleMarkers: React.FC<VehicleMarkersProps> = ({ map, vehicles }) => {
     selectedVehicle?.id,
     createMarkerElement,
     handleMarkerClick,
+    showVehicles,
   ]);
 
   useEffect(() => {

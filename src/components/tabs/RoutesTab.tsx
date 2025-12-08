@@ -1,12 +1,15 @@
-import React, { useState, useEffect, useRef } from "react";
+"use client";
+
+import type React from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   getPlaceAutocomplete,
   getPlaceDetails,
   getDirections,
-  PlacePrediction,
-  PlaceDetails,
-  DirectionRoute,
-  DirectionStep,
+  type PlacePrediction,
+  type PlaceDetails,
+  type DirectionRoute,
+  type DirectionStep,
 } from "../../services/googleMapsService";
 import { useMap } from "../../contexts/MapContext";
 import { useTransit } from "../../contexts/TransitContext";
@@ -347,7 +350,9 @@ const PlaceInput: React.FC<PlaceInputProps> = ({
 };
 
 // Main Routes Tab
-const RoutesTab: React.FC = () => {
+const RoutesTab: React.FC<{ onOpenChatBot?: (message: string) => void }> = ({
+  onOpenChatBot,
+}) => {
   const [originInput, setOriginInput] = useState("");
   const [destinationInput, setDestinationInput] = useState("");
   const [mode, setMode] = useState<TravelMode>("TRANSIT");
@@ -357,6 +362,7 @@ const RoutesTab: React.FC = () => {
   const [selectedRouteIndex, setSelectedRouteIndex] = useState<number | null>(
     null
   );
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
 
   const {
     routeOrigin,
@@ -417,8 +423,8 @@ const RoutesTab: React.FC = () => {
         setError("No routes found. Try different locations or travel mode.");
       } else {
         setRoutes(result.routes);
-        setSelectedRouteIndex(0);
-        setSelectedDirection(result.routes[0]);
+        // setSelectedRouteIndex(0);
+        // setSelectedDirection(result.routes[0]);
         setRouteDisplayMode("directions");
 
         // Fit bounds with padding for sidebar
@@ -468,6 +474,19 @@ const RoutesTab: React.FC = () => {
     setRouteDisplayMode("none");
   };
 
+  const handleSuggestionClick = (suggestion: string) => {
+    if (onOpenChatBot) {
+      onOpenChatBot(suggestion);
+    }
+  };
+
+  const suggestions = [
+    "Take me to the nearest petrol station",
+    "Best fine dining restaurant in my town",
+    "Find the closest hospital",
+    "Halal restaurants near me",
+  ];
+
   const modes: TravelMode[] = ["TRANSIT", "DRIVING", "WALKING", "BICYCLING"];
   const modeLabels: Record<TravelMode, string> = {
     TRANSIT: "Transit",
@@ -478,6 +497,25 @@ const RoutesTab: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      {!routeOrigin && !routeDestination && (
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold text-dark-400 uppercase tracking-wide">
+            Quick Suggestions
+          </h3>
+          <div className="space-y-2">
+            {suggestions.map((suggestion, index) => (
+              <button
+                key={index}
+                onClick={() => handleSuggestionClick(suggestion)}
+                className="w-full text-left px-3 py-2 bg-dark-850 hover:bg-dark-800 rounded-lg transition-colors border border-dark-700 hover:border-primary-500 text-sm text-dark-300 hover:text-white"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Origin Input */}
       <div className="space-y-2">
         <PlaceInput

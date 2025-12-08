@@ -261,7 +261,7 @@ const AboutTab: React.FC = () => {
                   <GithubIcon />
                 </a>
                 <a
-                  href="https://www.linkedin.com/in/hanasrullah-halim/"
+                  href="https://www.linkedin.com/in/hanasrullah-halim-89496a15a/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-dark-500 hover:text-blue-400 transition-colors"

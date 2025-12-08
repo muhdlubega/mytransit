@@ -1,5 +1,7 @@
-import React from "react";
-import { NavTabId } from "../../utils/constants";
+"use client";
+
+import type React from "react";
+import type { NavTabId } from "../../utils/constants";
 import RoutesTab from "../tabs/RoutesTab";
 import FavouritesTab from "../tabs/FavouritesTab";
 import SchedulesTab from "../tabs/SchedulesTab";
@@ -8,6 +10,7 @@ import AboutTab from "../tabs/AboutTab";
 interface RightSidebarProps {
   activeTab: NavTabId;
   onClose: () => void;
+  onOpenChatBot?: (message: string) => void;
 }
 
 const CloseIcon = () => (
@@ -26,7 +29,11 @@ const CloseIcon = () => (
   </svg>
 );
 
-const RightSidebar: React.FC<RightSidebarProps> = ({ activeTab, onClose }) => {
+const RightSidebar: React.FC<RightSidebarProps> = ({
+  activeTab,
+  onClose,
+  onOpenChatBot,
+}) => {
   const tabTitles: Record<NavTabId, string> = {
     routes: "Plan Route",
     favourites: "My Favourites",
@@ -37,7 +44,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ activeTab, onClose }) => {
   const renderTabContent = () => {
     switch (activeTab) {
       case "routes":
-        return <RoutesTab />;
+        return <RoutesTab onOpenChatBot={onOpenChatBot} />;
       case "favourites":
         return <FavouritesTab />;
       case "schedules":

@@ -483,8 +483,7 @@ Anas combines his software development background with a strong interest in the 
 
 For issues, questions, or suggestions:
 - Open a GitHub issue
-- Contact: [your-email]
-- Documentation: [project-wiki-url]
+- Contact: muhdlubegasiraje@gmail.com (Web Developer) / hanasrullahhalim@gmail.com (Mobile Developer)
 
 ---
 

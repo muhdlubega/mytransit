@@ -1,14 +1,17 @@
-import React, {
+"use client";
+
+import type React from "react";
+import {
   createContext,
   useContext,
   useState,
   useEffect,
   useCallback,
   useRef,
-  ReactNode,
+  type ReactNode,
 } from "react";
-import { Vehicle, VehicleFilter } from "../types/vehicle";
-import { GTFSStaticData, GTFSShape } from "../types/gtfs";
+import type { Vehicle, VehicleFilter } from "../types/vehicle";
+import type { GTFSStaticData, GTFSShape } from "../types/gtfs";
 import { fetchGTFSRealtime, fetchGTFSStatic } from "../services/gtfsService";
 import { interpolatePosition, findPositionOnRoute } from "../utils/distance";
 import {
@@ -25,6 +28,8 @@ interface TransitContextType {
   selectedFeed: { type: string; category: string };
   isLoading: boolean;
   error: string | null;
+  showVehicles: boolean;
+  setShowVehicles: (show: boolean) => void;
   setSelectedVehicle: (vehicle: Vehicle | null) => void;
   setFilters: (filters: VehicleFilter) => void;
   setSelectedFeed: (feed: { type: string; category: string }) => void;
@@ -67,6 +72,7 @@ export const TransitProvider: React.FC<TransitProviderProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastDataUpdate, setLastDataUpdate] = useState<number>(0);
+  const [showVehicles, setShowVehicles] = useState(false);
 
   const lastUpdateRef = useRef<number>(Date.now());
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -316,6 +322,8 @@ export const TransitProvider: React.FC<TransitProviderProps> = ({
         selectedFeed,
         isLoading,
         error,
+        showVehicles,
+        setShowVehicles,
         setSelectedVehicle,
         setFilters,
         setSelectedFeed,
